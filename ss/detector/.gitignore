@@ -1,0 +1,6 @@
+checkpoints
+ssd_logs
+dataset
+data
+*.log
+**/__pycache__

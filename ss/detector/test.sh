@@ -1,0 +1,1 @@
+python predict_script.py config/test_config.ini
