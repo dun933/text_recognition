@@ -8,15 +8,15 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-sys.path.append(os.getcwd())
+sys.path.append(os.getcwd()+'../')
 from nets import model_train as model
 from utils.rpn_msr.proposal_layer import proposal_layer
 from utils.text_connector.detectors import TextDetector
 
-tf.app.flags.DEFINE_string('test_data_path', 'data/demo/', '')
-tf.app.flags.DEFINE_string('output_path', 'data/res/', '')
+tf.app.flags.DEFINE_string('test_data_path', '../data/Eval_Vietnamese_TestSet/', '')
+tf.app.flags.DEFINE_string('output_path', '../data/res/', '')
 tf.app.flags.DEFINE_string('gpu', '0', '')
-tf.app.flags.DEFINE_string('checkpoint_path', 'checkpoints_mlt/', '')
+tf.app.flags.DEFINE_string('checkpoint_path', '../checkpoints_mlt/', '')
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -52,6 +52,7 @@ def resize_image(img):
 
 
 def main(argv=None):
+    FLAGS.output_path=FLAGS.test_data_path+'/res'
     if os.path.exists(FLAGS.output_path):
         shutil.rmtree(FLAGS.output_path)
     os.makedirs(FLAGS.output_path)
