@@ -34,7 +34,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 print(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 print(sys.path)
-from general_utils.full_width_half_width import halfen, fullen, is_half_width, is_full_width
+from dataprovision_utils.full_width_half_width import halfen, fullen, is_half_width, is_full_width
 
 plaugmgr = PipeLineAugmentationManager()
 plaugmgr.add_fn(apply_gaussian_blur, "apply_gaussian_blur", Config_Vietnamese.gauss_blur)
@@ -508,8 +508,6 @@ def get_list_font_from_dir(font_dir, gen_more_popular_font=True):
     if(gen_more_popular_font==True):
         for i in range(10):
             list_font+=['Times_New_Roman']
-        for i in range(5):
-            list_font+=['arial']
     list_font=sorted(list_font)
     print('Font list:')
     for font in list_font:

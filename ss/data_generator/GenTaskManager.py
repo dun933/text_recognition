@@ -5,35 +5,17 @@ import math, cv2
 from fontTools.ttLib import TTFont
 import sys, os
 
-PACKAGE_PARENT = '..'
-SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-
-try:
-    from .config.config_Vietnamese import Config_Vietnamese
-    from .ImageGenTask import ImageGenTask_v3 as ImageGenTask
-    from config.ConfigManager import ConfigManager
-    from .dataprovision_utils.Charset import Charset
-    from .dataprovision_utils.image_augmentation_fns import apply_salt_and_pepper, apply_gaussian_blur, \
-        apply_motion_blur
-    from .BackgroundItem import BackgroundType, BackgroundItem
-    from .dataprovision_utils.bgfs_parsing import parse_bgfc_filepath
-    from .dataprovision_utils.etc_fns import prepare_list_from_label_file, fetch_word_list_from_txt_file
-    from .dataprovision_utils.gen_image_fns import generate_single_image_from_word_list_v1, get_statistics_for_font, is_visible_char, get_font_path, get_list_font_from_dir
-    from .dataprovision_utils.CharBox import PredBox
-    from .dataprovision_utils.language import Language
-except ImportError:
-    from config.config_Vietnamese import Config_Vietnamese
-    from ImageGenTask import ImageGenTask_v3 as ImageGenTask
-    from config.ConfigManager import ConfigManager
-    from dataprovision_utils.Charset import Charset
-    from dataprovision_utils.image_augmentation_fns import apply_salt_and_pepper, apply_gaussian_blur, apply_motion_blur
-    from BackgroundItem import BackgroundType, BackgroundItem
-    from dataprovision_utils.bgfs_parsing import parse_bgfc_filepath
-    from dataprovision_utils.etc_fns import prepare_list_from_label_file, fetch_word_list_from_txt_file
-    from dataprovision_utils.gen_image_fns import generate_single_image_from_word_list_v1, get_statistics_for_font, is_visible_char, get_font_path, get_list_font_from_dir
-    from dataprovision_utils.CharBox import PredBox
-    from dataprovision_utils.voc_xml import save_xml
+from config.config_Vietnamese import Config_Vietnamese
+from ImageGenTask import ImageGenTask_v3 as ImageGenTask
+from config.ConfigManager import ConfigManager
+from dataprovision_utils.Charset import Charset
+from dataprovision_utils.image_augmentation_fns import apply_salt_and_pepper, apply_gaussian_blur, apply_motion_blur
+from BackgroundItem import BackgroundType, BackgroundItem
+from dataprovision_utils.bgfs_parsing import parse_bgfc_filepath
+from dataprovision_utils.etc_fns import prepare_list_from_label_file, fetch_word_list_from_txt_file
+from dataprovision_utils.gen_image_fns import generate_single_image_from_word_list_v1, get_statistics_for_font, is_visible_char, get_font_path, get_list_font_from_dir
+from dataprovision_utils.CharBox import PredBox
+from dataprovision_utils.voc_xml import save_xml
 
 from tqdm import tqdm
 

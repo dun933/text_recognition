@@ -1,11 +1,10 @@
-from enum import Enum, auto
-
+from enum import Enum
 class TextFailure(Enum):
-    EXCEED_TOP_LIMIT = auto()
-    EXCEED_BOTTOM_LIMIT = auto()
-    EXCEED_LEFT_LIMIT= auto()
-    EXCEED_RIGHT_LIMIT = auto()
-    OVERLAP_WITH_EXISTING_BOX = auto()
+    EXCEED_TOP_LIMIT = 1
+    EXCEED_BOTTOM_LIMIT = 2
+    EXCEED_LEFT_LIMIT= 3
+    EXCEED_RIGHT_LIMIT = 4
+    OVERLAP_WITH_EXISTING_BOX = 5
 
 class Box:
     def __init__(self, x1,y1,x2,y2):

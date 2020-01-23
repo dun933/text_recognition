@@ -56,10 +56,10 @@ voc_classes = configManager.classes
 NUM_CLASSES = len(voc_classes) + 1
 input_size = 320
 channels = 3
-batch_size = 32
+batch_size = 16
 save_interval = 1
 nb_epoch = 80
-num_worker=16
+num_worker=8
 base_lr = 0.001 #1
 
 input_shape = (input_size, input_size, channels)

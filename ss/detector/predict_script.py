@@ -48,18 +48,18 @@ weight_path = configmanager.ssd_weight_path
 weight_name = os.path.basename(weight_path)
 result_save_dir = 'outputs/predict_' + training_time + '_' + weight_name.replace('.hdf5','')
 
-img_dir = '/home/advlab/data/test_vn/test_image_vn/image_fix/'
+img_dir = '/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data/Cello_Vietnamese_TestSet/'
 #img_dir='/data/CuongND/SDSC2_IMG'
-GT_dir = '/home/advlab/data/test_vn/test_image_vn/v6/fix/ground_truth'
+GT_dir = '/home/duycuong/PycharmProjects/research_py3/text_recognition/data/Cello/v7/ground_truth'
 #from data_processing import  get_list_file_in_folder
 #file_list=get_list_file_in_folder(img_dir)
 #file_list = [x.replace('.png','').replace('.jpg','') for x in file_list]
 file_list = [
-    #'20190731_144554',
-    '20190731_144540'#,
-    # '190715070245517_8478000669_pod',
-    # '190715070249216_8477872491_pod',
-    # '190715070317353_8479413342_pod'
+    '20190731_144554',
+    '20190731_144540',
+    '190715070245517_8478000669_pod',
+    '190715070249216_8477872491_pod',
+    '190715070317353_8479413342_pod'
 ]
 
 class writer:

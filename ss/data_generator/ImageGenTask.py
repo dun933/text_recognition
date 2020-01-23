@@ -28,7 +28,7 @@ class ImageGenTask_v3:
         for k, v in self.__dict__.items():
             if k == "bgitem":
                 img_name = v.imgfilepath.split("/")[-1].replace('.png','')
-                name = "{}_{}".format(k, img_name)
+                name = "{}_{}".format(k, img_name)+name
             else:
                 name = "-".join([name,"{}_{}".format(k.replace('font_',''), v)])
         return name
