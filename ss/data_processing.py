@@ -1,6 +1,6 @@
 import os, cv2, codecs, json
 import shutil
-from aicr_dssd_train.config.config_manager import ConfigManager
+#from detector.config.config_manager import ConfigManager
 import numpy as np
 
 from matplotlib import rc, pyplot as plt
@@ -21,10 +21,10 @@ classes_number = '0123456789'
 class_list_number = [x for x in classes_number]
 
 configfile='aicr_dssd_train/config/vietnamese_config.ini'
-configmanager = ConfigManager(configfile)
-img_shape = configmanager.img_shape
-classes = configmanager.classes
-split_overap_size   = configmanager.split_overap_size
+#configmanager = ConfigManager(configfile)
+# img_shape = configmanager.img_shape
+# classes = configmanager.classes
+# split_overap_size   = configmanager.split_overap_size
 
 img_dir = '/data/CuongND/aicr_vn/data/from_Korea/Vietnamese_TestSet'
 file_list = [
@@ -37,8 +37,8 @@ file_list = [
 
 GT_dir = '/data/CuongND/aicr_vn/aicr_dssd_train/outputs/predict_2stages_2019-11-01_09-50'
 max_size = 2000
-img_font_idle_size  = configmanager.img_font_idle_size
-img_font_idle_size2 = configmanager.img_font_idle_size2
+#img_font_idle_size  = configmanager.img_font_idle_size
+#img_font_idle_size2 = configmanager.img_font_idle_size2
 
 class Obj_GT:
     def __init__(self, line, scale=1.0):
@@ -456,6 +456,45 @@ def convert_png2jpg(src_dir, dst_dir):
         img=cv2.imread(src_path)
         cv2.imwrite(dst_path,img)
 
+def check_icdar_sample(img_dir, num_file=1000):
+    list_file=get_list_file_in_folder(img_dir)
+    #file_name='bgitem_bg_000511-slant_2-typeface_DejaVuSerifCondensed-BoldItalic-AA_enable_False-weight_0-size_24-rotate_0.png'
+    # font
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    # fontScale
+    fontScale = 1
+    # Blue color in BGR
+    color = (255, 0, 0)
+
+    # Line thickness of 2 px
+    thickness = 2
+    for file in list_file:
+        #file=file_name
+        print("draw file:",file)
+        img_path=os.path.join(img_dir,file)
+        img=cv2.imread(img_path)
+
+        anno_path=img_path.replace('.png','.txt')
+        with open(anno_path, 'r', encoding='utf-8') as f:
+            anno_list = f.readlines()
+        anno_list = [x.strip() for x in anno_list]
+
+        for anno in anno_list:
+            pts=anno.split(',')
+            left=int(pts[0])
+            top=int(pts[1])
+            right=int(pts[2])
+            bottom=int(pts[5])
+            val=pts[8]
+            img = cv2.rectangle(img, (left,top), (right,bottom), (0,0,255), 2)
+            #img = cv2.putText(img,val, (left,top), font, fontScale, color, thickness, cv2.LINE_AA)
+            #print(val)
+
+        cv2.imshow("res", img)
+        cv2.waitKey(0)
+
+
+
 if __name__== "__main__":
     #get_single_word_from_composed_word('data/corpus/Viet22K.txt')
     #gen_random_serial_corpus()
@@ -467,4 +506,5 @@ if __name__== "__main__":
     #test_background_subtract()
     src='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_images2_ori_3'
     dst='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_img_jpg'
-    convert_png2jpg(src,dst)
+    #convert_png2jpg(src,dst)
+    check_icdar_sample('/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100_2020-01-23_18-55/images')

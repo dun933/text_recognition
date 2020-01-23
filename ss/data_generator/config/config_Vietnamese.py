@@ -11,8 +11,8 @@ class Config_Vietnamese:
 
     font_dir='data/fonts_vn'
 
-    num_data_generate = 300000
-    num_thread = 10
+    num_data_generate = 100000
+    num_thread = 8
     # parameters
     gauss_blur = 0.2
     salt_and_pepper = 0.2
@@ -26,13 +26,14 @@ class Config_Vietnamese:
     symbol_char_filepath = "./char_list/symbols.txt"
     number_char_filepath = "./char_list/numbers.txt"
     background_char_filepath = "./char_list/background.txt"
-    font_min_size= 18
-    font_max_size= 70
+    font_min_size= 13
+    font_max_size= 60
     img_width= 320
     img_height= 320
     do_augmentation_flag= True
     draw_annotated_image= False
     gen_lowres = False
+    word_bbox=True
 
     english_font_typeface_options= [
         "Times\\-Narrow",

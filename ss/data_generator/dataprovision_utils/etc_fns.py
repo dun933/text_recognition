@@ -7,6 +7,17 @@ def prepare_list_from_label_file(label_filepath):
     tolist = list(str(rdata))
     return tolist
 
+def save_to_icdar(word_bbox, config):
+    result=''
+    for bbox in word_bbox:
+        left= str(int(config.img_width*bbox.x1))
+        right= str(int(config.img_width*bbox.x2))
+        top= str(int(config.img_height*bbox.y1))
+        bottom= str(int(config.img_height*bbox.y2))
+        line=','.join([left,top,right,top,right,bottom,left,bottom,bbox.char_value])+'\n'
+        result+=line
+    return result
+
 def fetch_word_list_from_txt_file(txt_filepath, mode=1):
     print('etc_fns.fetch_word_list_from_txt_file:',txt_filepath,', mode:',mode)
     with open(txt_filepath,'r', encoding='utf-8') as fd:

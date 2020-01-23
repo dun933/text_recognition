@@ -12,7 +12,7 @@ from dataprovision_utils.Charset import Charset
 from dataprovision_utils.image_augmentation_fns import apply_salt_and_pepper, apply_gaussian_blur, apply_motion_blur
 from BackgroundItem import BackgroundType, BackgroundItem
 from dataprovision_utils.bgfs_parsing import parse_bgfc_filepath
-from dataprovision_utils.etc_fns import prepare_list_from_label_file, fetch_word_list_from_txt_file
+from dataprovision_utils.etc_fns import prepare_list_from_label_file, fetch_word_list_from_txt_file, save_to_icdar
 from dataprovision_utils.gen_image_fns import generate_single_image_from_word_list_v1, get_statistics_for_font, is_visible_char, get_font_path, get_list_font_from_dir
 from dataprovision_utils.CharBox import PredBox
 from dataprovision_utils.voc_xml import save_xml
@@ -257,11 +257,11 @@ def thread_gen_bunch_of_images(indices, tasks, shared_queue, word_list, charset,
         index = indices[i]
         task = tasks[i]
         for r in range(repeat):
-            thread_gen_image_v3(index, task, shared_queue, word_list, charset, configmgr, char_stats_dict, save_online, r,
+            thread_gen_image_v3(index, task, shared_queue, word_list, charset, configmgr, char_stats_dict, save_online,
                                 output_dir, **kwargs)
 
 
-def thread_gen_image_v3(index, task, shared_queue, word_list, charset, configmgr, char_stats_dict, save_online, r, output_dir, **kwargs):
+def thread_gen_image_v3(index, task, shared_queue, word_list, charset, configmgr, char_stats_dict, save_online, output_dir, **kwargs):
     #print('GenTaskManager.thread_gen_image_v3')
 
     font_weight = task.font_weight
@@ -289,7 +289,8 @@ def thread_gen_image_v3(index, task, shared_queue, word_list, charset, configmgr
         "remove_invisible": True,
         "char_stats_dict": char_stats_dict,
         "unsupported_char": unsupported_char,
-        "charset": charset
+        "charset": charset,
+        "word_bbox": configmgr.word_bbox
     }
 
     image, charbox_list, font_size = generate_single_image_from_word_list_v1(**kw)
@@ -306,21 +307,31 @@ def thread_gen_image_v3(index, task, shared_queue, word_list, charset, configmgr
         xml_dir = os.path.join(output_dir, "XML")
         img_filepath = os.path.join(img_dir, img_filename)
 
-        charbox_json_list = []
-        for charbox in charbox_list:
-            charbox_json_list.append(charbox.export_to_json())
-
         cv2.imwrite(img_filepath, image)
 
-        # Save JSON file
-        savejson = {"data": charbox_json_list}
-        json_filename = "{}.json".format(basename)
-        json_filepath = os.path.join(annot_dir, json_filename)
+        if(configmgr.word_bbox):
+            # Save text file as format of icdar
+            result_txt=save_to_icdar(charbox_list,configmgr)
+            annot_filename = "{}.txt".format(basename)
+            annot_filepath = os.path.join(img_dir, annot_filename)
 
-        # with open(json_filepath, 'w') as fd:
-        #     json.dump(savejson, fd)
-        with open(json_filepath, 'w', encoding='utf-8') as fd:
-            json.dump(savejson, fd, ensure_ascii=False)
+            with open(annot_filepath, 'w', encoding='utf-8') as f:
+                f.write(result_txt)
+        else:
+            # Save JSON file
+            charbox_json_list = []
+            for charbox in charbox_list:
+                charbox_json_list.append(charbox.export_to_json())
+            savejson = {"data": charbox_json_list}
+            json_filename = "{}.json".format(basename)
+            json_filepath = os.path.join(annot_dir, json_filename)
+
+            # with open(json_filepath, 'w') as fd:
+            #     json.dump(savejson, fd)
+            with open(json_filepath, 'w', encoding='utf-8') as fd:
+                json.dump(savejson, fd, ensure_ascii=False)
+
+
     else:
         shared_queue.put(result)
 

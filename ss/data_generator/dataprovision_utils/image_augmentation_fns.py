@@ -108,7 +108,7 @@ class PipeLineAugmentationManager(AugmentationManager):
 			random_float = random.random()
 			fn = fn_bundle[0]
 			fn_str_repr = fn_bundle[1]
-			if(font_size<25 and fn_str_repr=='ready_apply_low_res_by_resizing'):
+			if(font_size<22 and fn_str_repr=='ready_apply_low_res_by_resizing'):
 				continue
 
 			if random_float <= probability:

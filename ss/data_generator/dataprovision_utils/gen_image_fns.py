@@ -187,6 +187,8 @@ def generate_single_image_from_word_list_v1(**kwargs):
     char_stats_dict = kwargs["char_stats_dict"]
     unsupported_char = kwargs["unsupported_char"]
     charset = kwargs["charset"]
+    word_bbox = kwargs["word_bbox"]
+
     if bgitem.type == BackgroundType.SOLIDCOLOR:
         raise Exception("cannot be solid color backgroundType")
     else:
@@ -215,7 +217,8 @@ def generate_single_image_from_word_list_v1(**kwargs):
         "char_stats_dict": char_stats_dict,
         "font_typeface": font_typeface,
         "unsupported_char": unsupported_char,
-        "charset": charset
+        "charset": charset,
+        "word_bbox": word_bbox
     }
     font_size = keep_drawing_words_on_surface(**kw)
     imgmat = convert_surface_to_cvmat(surface, surface.get_width(), surface.get_height())
@@ -245,6 +248,7 @@ def keep_drawing_words_on_surface(**kw):
     font_typeface = kw["font_typeface"]
     unsupported_char = kw["unsupported_char"]
     charset = kw["charset"]
+    word_bbox=kw["word_bbox"]
 
     font_size = random.randint(font_min_size, font_max_size)
     space_ratio = 1.0
@@ -323,6 +327,8 @@ def keep_drawing_words_on_surface(**kw):
         context.move_to(start_x, start_y)
         end_y_flag = False
         for index, word in enumerate(line_word_list):
+            left,right,top,bottom=1,0,1,0
+            final_word=''
             word = word.replace('\n','') #cuongnd remove \n
             if end_y_flag == True:
                 break
@@ -385,8 +391,16 @@ def keep_drawing_words_on_surface(**kw):
                 if x2 < 1 and y2 < 1:
                     if is_full_width(char):
                         char = halfen(char)
-                    charbox = CharBox(x1, y1, x2, y2, char, charset.get(char))
-                    charbox_list.append(charbox)
+                    if(word_bbox):
+                        left=min(left,x1)
+                        top=min(top,y1)
+                        right=max(right,x2)
+                        bottom=max(bottom,y2)
+                        final_word+=char
+                    else:
+                        charbox = CharBox(x1, y1, x2, y2, char, charset.get(char))
+                        charbox_list.append(charbox)
+
 
                 # update start_x and start_y
                 #nq.cuong updated, corrected position to reduce space character
@@ -399,6 +413,10 @@ def keep_drawing_words_on_surface(**kw):
                 start_x += font_size/3
                 context.move_to(start_x, start_y)
             # context.show_text(word)
+
+            if (word_bbox and final_word!=''):
+                charbox = CharBox(left, top, right, bottom, final_word, "test")
+                charbox_list.append(charbox)
 
         if np.random.RandomState().randint(0, 3) == 0:
             if np.random.RandomState().randint(0, 10) == 0:
@@ -422,6 +440,7 @@ def keep_drawing_words_on_surface(**kw):
         line_word_list, max_y_bearing, max_height, _ = gen_line_candidate_info(context, word_list, line_max_width,
                                                                                space_width, charset)
         next_start_y = start_y + max_height
+
         if next_start_y > start_y_max:
             break
     return font_size
