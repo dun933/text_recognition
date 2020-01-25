@@ -459,19 +459,23 @@ def convert_png2jpg(src_dir, dst_dir):
 def check_icdar_sample(img_dir, num_file=1000):
     list_file=get_list_file_in_folder(img_dir)
     #file_name='bgitem_bg_000511-slant_2-typeface_DejaVuSerifCondensed-BoldItalic-AA_enable_False-weight_0-size_24-rotate_0.png'
-    # font
     font = cv2.FONT_HERSHEY_SIMPLEX
-    # fontScale
     fontScale = 1
-    # Blue color in BGR
     color = (255, 0, 0)
 
     # Line thickness of 2 px
     thickness = 2
-    for file in list_file:
-        #file=file_name
-        print("draw file:",file)
-        img_path=os.path.join(img_dir,file)
+    import random
+    random.shuffle(list_file)
+    print('total:',len(list_file))
+    for i in range(len(list_file)):
+        img_path=os.path.join(img_dir,list_file[i])
+        if 'typeface_times.png' in list_file[i]:
+            print('delete',list_file[i])
+            os.remove(img_path)
+            os.remove(img_path.replace('.png','.txt'))
+            continue
+        print("draw file:",list_file[i])
         img=cv2.imread(img_path)
 
         anno_path=img_path.replace('.png','.txt')
@@ -493,7 +497,7 @@ def check_icdar_sample(img_dir, num_file=1000):
         cv2.imshow("res", img)
         cv2.waitKey(0)
 
-
+#typeface_times.png
 
 if __name__== "__main__":
     #get_single_word_from_composed_word('data/corpus/Viet22K.txt')
@@ -507,4 +511,4 @@ if __name__== "__main__":
     src='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_images2_ori_3'
     dst='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_img_jpg'
     #convert_png2jpg(src,dst)
-    check_icdar_sample('/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100_2020-01-23_18-55/images')
+    check_icdar_sample('/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-23_19-03/images')

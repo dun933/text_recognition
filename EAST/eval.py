@@ -8,11 +8,14 @@ import tensorflow as tf
 import locality_aware_nms as nms_locality
 import lanms
 
-tf.app.flags.DEFINE_string('test_data_path', '../data/level4/', '')
+test_set='level4'
+output_dir='../data/predict_'+test_set+'_'
+
+tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set+'/imgs', '')
 tf.app.flags.DEFINE_string('gpu_list', '0', '')
-tf.app.flags.DEFINE_string('checkpoint_path', 'models/east_icdar2015_resnet_v1_50_rbox/', '')
-tf.app.flags.DEFINE_string('output_dir', '../data/res_EAST_level4', '')
-tf.app.flags.DEFINE_bool('no_write_images', False, 'do not write images')
+tf.app.flags.DEFINE_string('checkpoint_path', 'outputs/', '')
+tf.app.flags.DEFINE_string('output_dir', output_dir, '')
+tf.app.flags.DEFINE_bool('write_images', True, 'write images')
 
 import model
 from icdar import restore_rectangle
@@ -126,13 +129,6 @@ def main(argv=None):
     import os
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu_list
 
-
-    try:
-        os.makedirs(FLAGS.output_dir)
-    except OSError as e:
-        if e.errno != 17:
-            raise
-
     with tf.get_default_graph().as_default():
         input_images = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='input_images')
         global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
@@ -145,6 +141,14 @@ def main(argv=None):
         with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
             ckpt_state = tf.train.get_checkpoint_state(FLAGS.checkpoint_path)
             model_path = os.path.join(FLAGS.checkpoint_path, os.path.basename(ckpt_state.model_checkpoint_path))
+            FLAGS.output_dir = FLAGS.output_dir + model_path.replace(FLAGS.checkpoint_path,'')
+
+            try:
+                os.makedirs(FLAGS.output_dir)
+            except OSError as e:
+                if e.errno != 17:
+                    raise
+
             print('Restore from {}'.format(model_path))
             saver.restore(sess, model_path)
 
@@ -188,7 +192,7 @@ def main(argv=None):
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
                             ))
                             cv2.polylines(im[:, :, ::-1], [box.astype(np.int32).reshape((-1, 1, 2))], True, color=(0, 0, 255), thickness=2)
-                if not FLAGS.no_write_images:
+                if FLAGS.write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
                     cv2.imwrite(img_path, im[:, :, ::-1])
 
