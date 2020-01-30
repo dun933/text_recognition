@@ -91,7 +91,7 @@ def gen_final_corpus(corpus_dir=''):
         print(count,corpus)
         final_str+=corpus+'\n'
 
-    save_filename=os.path.join(corpus_dir,'final_corpus_14Jan.txt')
+    save_filename=os.path.join(corpus_dir,'final_corpus_30Jan.txt')
     print('Save corpus:',save_filename)
     with open(save_filename, "w", encoding='utf-8') as save_file:
         save_file.write(final_str)

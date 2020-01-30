@@ -14,11 +14,11 @@ import tensorflow as tf
 
 from data_util import GeneratorEnqueuer
 
-tf.app.flags.DEFINE_string('training_data_path', '/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-23_19-03/images',
+tf.app.flags.DEFINE_string('training_data_path', '/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-30_21-20/images',
                            'training dataset to use')
 tf.app.flags.DEFINE_integer('max_image_large_side', 320,
                             'max image size of training')
-tf.app.flags.DEFINE_integer('max_text_size', 60,
+tf.app.flags.DEFINE_integer('max_text_size', 70,
                             'if the text in the input image is bigger than this, then we resize'
                             'the image according to this')
 tf.app.flags.DEFINE_integer('min_text_size', 6,

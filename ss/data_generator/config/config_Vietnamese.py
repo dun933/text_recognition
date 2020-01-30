@@ -6,7 +6,7 @@ class Config_Vietnamese:
     bgimg_dir='data/bg_img_png'
 
     #corpus list
-    corpus_file='corpus/final_corpus_14Jan.txt'
+    corpus_file='corpus/final_corpus_30Jan.txt'
     output_dir='outputs'
 
     font_dir='data/fonts_vn'
@@ -26,8 +26,8 @@ class Config_Vietnamese:
     symbol_char_filepath = "./char_list/symbols.txt"
     number_char_filepath = "./char_list/numbers.txt"
     background_char_filepath = "./char_list/background.txt"
-    font_min_size= 13
-    font_max_size= 60
+    font_min_size= 10
+    font_max_size= 70
     img_width= 320
     img_height= 320
     do_augmentation_flag= True

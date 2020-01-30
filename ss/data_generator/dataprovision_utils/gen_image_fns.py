@@ -298,12 +298,10 @@ def keep_drawing_words_on_surface(**kw):
     space_width = width3 - width2 - width1
     # print("space_width subtract calculated :{}".format(space_width))
 
-    line_max_width = img_width - image_left_margin - image_right_margin - 50
+    line_max_width = 3 * img_width
 
-    line_word_list, max_y_bearing, max_height, min_y_bearing = gen_line_candidate_info(context, word_list, line_max_width, space_width, charset)
-    start_x = image_left_margin
+    line_word_list, max_y_bearing, max_height, _ = gen_line_candidate_info(context, word_list, line_max_width, space_width, charset)
     start_y = image_top_margin + max_y_bearing + random.randint(0, 30)
-
     start_y_max = img_height - image_bottom_margin
 
     ##draw grid background
@@ -314,21 +312,17 @@ def keep_drawing_words_on_surface(**kw):
 
     context.set_line_width(np.random.RandomState().randint(1, 5))
     context.move_to(grid_image_left_margin, grid_image_top_margin)
-    context.line_to(grid_image_left_margin, img_height - grid_image_bottom_margin)
-    context.line_to(img_width - grid_image_right_margin, img_height - grid_image_bottom_margin)
-    context.line_to(img_width - grid_image_right_margin, grid_image_top_margin)
-    context.line_to(grid_image_left_margin, grid_image_top_margin)
+    # context.line_to(grid_image_left_margin, img_height - grid_image_bottom_margin)
+    # context.line_to(img_width - grid_image_right_margin, img_height - grid_image_bottom_margin)
+    # context.line_to(img_width - grid_image_right_margin, grid_image_top_margin)
+    # context.line_to(grid_image_left_margin, grid_image_top_margin)
     context.stroke()
 
     while True:
-        start_x = image_left_margin + random.randint(0, 30)
-        end_x = img_width - image_right_margin + random.randint(0, 30)
-        # now start drawing the words
-        context.move_to(start_x, start_y)
+        start_x = image_left_margin + random.randint(0, 20)
         end_y_flag = False
         for index, word in enumerate(line_word_list):
             left,right,top,bottom=1,0,1,0
-            final_word=''
             word = word.replace('\n','') #cuongnd remove \n
             if end_y_flag == True:
                 break
@@ -361,34 +355,15 @@ def keep_drawing_words_on_surface(**kw):
             if not is_drawing:
                 #print('Stop draw word','\"'+word+'\"')
                 continue
+
+            list_x = []
             for char in word_char_list:
-                offx = start_x  # + x_bearing #+ width/2.0
-                offy = start_y  # + y_bearing #+ height/2.0
-                context.move_to(offx, offy)
-                radian = random.randint(-175 * 3, 175 * 3) / 10000
-                #context.rotate(radian)
-                if np.random.RandomState().randint(0, 2) == 0:
-                    rand_yx = random.randint(-3, 3)
-                    matrix.yx = rand_yx
-                    #context.set_font_matrix(matrix)
+                list_x.append(start_x)
                 x_bearing, y_bearing, width, height, x_advance, y_advance = context.text_extents(char)
-
-                if end_x < start_x + x_advance:
-                    end_y_flag = True
-                    #context.rotate(-radian)
-                    context.move_to(start_x, start_y)
-                    break
-
-                context.show_text(char)
-                matrix.yx = 0
-                context.set_font_matrix(matrix)
-                #context.rotate(-radian)
-                context.move_to(start_x, start_y)
-
                 x1, x2, y1, y2 = get_new_position(start_x, start_y, x_bearing, y_bearing, width, height,
-                                                  img_width, img_height, max_height, charset, char, radian)
+                                                  img_width, img_height, max_height, charset, char)
 
-                if x2 < 1 and y2 < 1:
+                if x2 <= 1 and y2 <= 1:
                     if is_full_width(char):
                         char = halfen(char)
                     if(word_bbox):
@@ -396,26 +371,24 @@ def keep_drawing_words_on_surface(**kw):
                         top=min(top,y1)
                         right=max(right,x2)
                         bottom=max(bottom,y2)
-                        final_word+=char
                     else:
                         charbox = CharBox(x1, y1, x2, y2, char, charset.get(char))
                         charbox_list.append(charbox)
-
-
-                # update start_x and start_y
-                #nq.cuong updated, corrected position to reduce space character
-                if random.randint(0, 1) == 0:
-                    start_x += x_advance * space_ratio
                 else:
-                    start_x += x_advance * 1.1 *space_ratio
+                    end_y_flag = True
+                start_x += x_advance * 1.1 *space_ratio
+
+            if end_y_flag:
+                continue
+            for idx, char in enumerate(word_char_list):
+                context.move_to(list_x[idx], start_y)
+                context.show_text(char)
 
             if index < len(line_word_list):
                 start_x += font_size/3
-                context.move_to(start_x, start_y)
-            # context.show_text(word)
 
-            if (word_bbox and final_word!=''):
-                charbox = CharBox(left, top, right, bottom, final_word, "test")
+            if word_bbox:
+                charbox = CharBox(left, top, right, bottom, word, "test")
                 charbox_list.append(charbox)
 
         if np.random.RandomState().randint(0, 3) == 0:
@@ -571,43 +544,25 @@ def gen_line_candidate_info(context, word_list, line_width, space_width, charset
     word_height_list = []
     remain_line_width = line_width
 
-    try_count = 0
-    max_try_word_list = 5
-    min_length = 2
-    max_length = 6
+    max_word_list = 20
 
     while True:
-        count_down = try_count - max_try_word_list
-        if count_down > 0:
-            max_length_try = max_length - count_down + 1
-            if max_length_try < 1:
-                break
-            min_length_try = min(max_length_try, min_length)
-            #word = gen_random_word(min_length_try, max_length_try, charset)
-        else:
-            word = random.choice(word_list) #cuongnd no need to random word here anymore
-
-        x_bearing, y_bearing, width, height, x_advance, y_advance = context.text_extents(word)
-
-        if width > remain_line_width:
-            try_count += 1
-            continue
-        else:
-            try_count = 0
-
+        if max_word_list < 0:
+            break
+        word = random.choice(word_list) #cuongnd no need to random word here anymore
+        _, y_bearing, width, height, x_advance, y_advance = context.text_extents(word)
         remain_line_width = remain_line_width - width
+
+        if remain_line_width < 0:
+            break
 
         line_word_list.append(word)
         y_bearing_list.append(y_bearing)
         word_height_list.append(height)
+        max_word_list-=1
 
-        if remain_line_width > (space_width * 3):
-            remain_line_width = remain_line_width - space_width
-        else:
-            # there is little space left to write anything... just end the line here.
-            break
     if len(line_word_list) > 0:
-        max_y_bearing = min(y_bearing_list)  # using min since y_bearaing should be negative values
+        max_y_bearing = min(y_bearing_list)  # using min since y_bearing should be negative values
         max_y_bearing = abs(max_y_bearing)
         min_y_bearing = min(y_bearing_list)
         max_height = max(word_height_list)

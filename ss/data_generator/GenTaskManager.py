@@ -300,6 +300,7 @@ def thread_gen_image_v3(index, task, shared_queue, word_list, charset, configmgr
         #print('GenTaskManager.thread_gen_image_v3.save_online')
         basename = "{}".format(repr(task))
         basename = basename.replace('None',str(font_size))
+        basename = 'new_'+basename
         #print(basename+'\n')
         img_filename = "{}.png".format(basename)
         img_dir = os.path.join(output_dir, "images")

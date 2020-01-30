@@ -8,7 +8,7 @@ import tensorflow as tf
 import locality_aware_nms as nms_locality
 import lanms
 
-test_set='level4'
+test_set='Eval'
 output_dir='../data/predict_'+test_set+'_'
 
 tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set+'/imgs', '')
