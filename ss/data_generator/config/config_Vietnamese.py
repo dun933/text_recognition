@@ -6,7 +6,7 @@ class Config_Vietnamese:
     bgimg_dir='data/bg_img_png'
 
     #corpus list
-    corpus_file='corpus/final_corpus_30Jan.txt'
+    corpus_file='corpus/final_corpus_31Jan.txt'
     output_dir='outputs'
 
     font_dir='data/fonts_vn'

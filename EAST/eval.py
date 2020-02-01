@@ -9,11 +9,13 @@ import locality_aware_nms as nms_locality
 import lanms
 
 test_set='Eval'
-output_dir='../data/predict_'+test_set+'_'
+output_dir='outputs/predict_'+test_set+'_'
+#ckpt_path='backup/2nd_train/'
+ckpt_path='outputs'
 
 tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set+'/imgs', '')
 tf.app.flags.DEFINE_string('gpu_list', '0', '')
-tf.app.flags.DEFINE_string('checkpoint_path', 'outputs/', '')
+tf.app.flags.DEFINE_string('checkpoint_path', ckpt_path, '')
 tf.app.flags.DEFINE_string('output_dir', output_dir, '')
 tf.app.flags.DEFINE_bool('write_images', True, 'write images')
 
@@ -67,7 +69,8 @@ def resize_image(im, max_side_len=2400):
 
     ratio_h = resize_h / float(h)
     ratio_w = resize_w / float(w)
-
+    print('resize_h',resize_h)
+    print('resize_w',resize_w)
     return im, (ratio_h, ratio_w)
 
 
@@ -141,7 +144,7 @@ def main(argv=None):
         with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
             ckpt_state = tf.train.get_checkpoint_state(FLAGS.checkpoint_path)
             model_path = os.path.join(FLAGS.checkpoint_path, os.path.basename(ckpt_state.model_checkpoint_path))
-            FLAGS.output_dir = FLAGS.output_dir + model_path.replace(FLAGS.checkpoint_path,'')
+            FLAGS.output_dir = FLAGS.output_dir + os.path.basename(ckpt_state.model_checkpoint_path)
 
             try:
                 os.makedirs(FLAGS.output_dir)

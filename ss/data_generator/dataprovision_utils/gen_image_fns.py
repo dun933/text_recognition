@@ -251,6 +251,7 @@ def keep_drawing_words_on_surface(**kw):
     word_bbox=kw["word_bbox"]
 
     font_size = random.randint(font_min_size, font_max_size)
+    #font_size=10
     space_ratio = 1.0
     # select random font color
     x1 = 0
@@ -288,7 +289,8 @@ def keep_drawing_words_on_surface(**kw):
     image_right_margin = 10
     image_bottom_margin = 10
 
-    line_gap = np.random.RandomState().choice(list(range(5, 10)) + [20] + [30])
+    #line_gap = np.random.RandomState().choice(list(range(5, 10)) + [20] + [30])
+    line_gap=random.randint(int(font_size/4),int(font_size/3))
 
     # calculate space width
     x_bearing, y_bearing, width3, height, x_advance, y_advance = context.text_extents("a b")
@@ -299,9 +301,8 @@ def keep_drawing_words_on_surface(**kw):
     # print("space_width subtract calculated :{}".format(space_width))
 
     line_max_width = 3 * img_width
-
     line_word_list, max_y_bearing, max_height, _ = gen_line_candidate_info(context, word_list, line_max_width, space_width, charset)
-    start_y = image_top_margin + max_y_bearing + random.randint(0, 30)
+    start_y = image_top_margin + max_y_bearing + random.randint(0, 10)
     start_y_max = img_height - image_bottom_margin
 
     ##draw grid background
@@ -310,35 +311,56 @@ def keep_drawing_words_on_surface(**kw):
     grid_image_right_margin = np.random.RandomState().randint(2, 12)
     grid_image_bottom_margin = np.random.RandomState().randint(2, 12)
 
-    context.set_line_width(np.random.RandomState().randint(1, 5))
-    context.move_to(grid_image_left_margin, grid_image_top_margin)
-    # context.line_to(grid_image_left_margin, img_height - grid_image_bottom_margin)
-    # context.line_to(img_width - grid_image_right_margin, img_height - grid_image_bottom_margin)
-    # context.line_to(img_width - grid_image_right_margin, grid_image_top_margin)
-    # context.line_to(grid_image_left_margin, grid_image_top_margin)
-    context.stroke()
+    context.set_line_width(np.random.RandomState().randint(1, int(font_size/5)))
+    rand_vertical_line_x=random.randint(10, 310)
+
+    if np.random.RandomState().randint(0, 3) != 0:
+        context.move_to(rand_vertical_line_x, grid_image_top_margin)
+        context.line_to(rand_vertical_line_x, img_height - grid_image_bottom_margin)
+        # context.line_to(img_width - grid_image_right_margin, img_height - grid_image_bottom_margin)
+        # context.line_to(img_width - grid_image_right_margin, grid_image_top_margin)
+        # context.line_to(grid_image_left_margin, grid_image_top_margin)
+        context.stroke()
 
     while True:
-        start_x = image_left_margin + random.randint(0, 20)
+        start_x = image_left_margin + random.randint(0, 10)
         end_y_flag = False
-        for index, word in enumerate(line_word_list):
-            left,right,top,bottom=1,0,1,0
-            word = word.replace('\n','') #cuongnd remove \n
-            if end_y_flag == True:
-                break
-            matrix = cairo.Matrix(xx=font_size, yx=0, xy=0, yy=font_size, x0=0, y0=0)
-            word_char_list = list(word)
+        #line_word_list = sorted(line_word_list, key=len)
+        #print(line_word_list)
+        same_type_for_line =random.choice([True, False])
+
+        #set matrix for line
+        matrix = cairo.Matrix(xx=font_size, yx=0, xy=0, yy=font_size, x0=0, y0=0)
+        if same_type_for_line:
             if np.random.RandomState().randint(0, 2) == 0:
                 new_width = np.random.RandomState().randint(int(font_size * 0.5), int(font_size * 1.4))
                 matrix.xx = round(new_width)
-            #Italic
+            # Italic
             if np.random.RandomState().randint(0, 2) == 0:
                 rand_xy = random.randint(-10, 5)
                 matrix.xy = rand_xy
 
             context.set_font_matrix(matrix)
+
+        for index, word in enumerate(line_word_list):
+            left,right,top,bottom=1,0,1,0
+            word = word.replace('\n','') #cuongnd remove \n
+            if end_y_flag == True:
+                break
+            word_char_list = list(word)
+            if not same_type_for_line:
+                if np.random.RandomState().randint(0, 2) == 0:
+                    new_width = np.random.RandomState().randint(int(font_size * 0.5), int(font_size * 1.4))
+                    matrix.xx = round(new_width)
+                # Italic
+                if np.random.RandomState().randint(0, 2) == 0:
+                    rand_xy = random.randint(-10, 5)
+                    matrix.xy = rand_xy
+
+                context.set_font_matrix(matrix)
+
             # draw word char by char and save charbox info
-            is_drawing = True
+            draw_this_word = True
             for char in word_char_list:
                 is_supported = True
                 if ord(char) in unsupported_char[font_typeface]:
@@ -350,13 +372,14 @@ def keep_drawing_words_on_surface(**kw):
 
                 if is_supported is False:
                     #print("keep_drawing_words_on_surface.Font \"{}\" does not support char {}:{}".format(font_typeface, char, hex(ord(char))))
-                    is_drawing = False
+                    draw_this_word = False
                     break
-            if not is_drawing:
+            if not draw_this_word:
                 #print('Stop draw word','\"'+word+'\"')
                 continue
 
             list_x = []
+            old_start_x=start_x
             for char in word_char_list:
                 list_x.append(start_x)
                 x_bearing, y_bearing, width, height, x_advance, y_advance = context.text_extents(char)
@@ -374,11 +397,17 @@ def keep_drawing_words_on_surface(**kw):
                     else:
                         charbox = CharBox(x1, y1, x2, y2, char, charset.get(char))
                         charbox_list.append(charbox)
-                else:
-                    end_y_flag = True
-                start_x += x_advance * 1.1 *space_ratio
 
-            if end_y_flag:
+                    start_x += x_advance * 1.1 * space_ratio
+                else:
+                    draw_this_word = False
+                    if index >= len(line_word_list):
+                        end_y_flag = True
+                    break
+
+            if not draw_this_word or end_y_flag:
+                start_x = old_start_x
+                #context.move_to(start_x, start_y) #try next word
                 continue
             for idx, char in enumerate(word_char_list):
                 context.move_to(list_x[idx], start_y)
@@ -401,7 +430,6 @@ def keep_drawing_words_on_surface(**kw):
                 dash_type = [dash1, space] if repeat == 1 else [dash1, space, dash2, space]
                 context.set_dash(dash_type, offset)
 
-            context.set_line_width(np.random.RandomState().randint(1, 5))
             end_y = start_y + np.random.RandomState().randint(0, line_gap + 1)
             context.move_to(grid_image_left_margin, end_y)
             context.line_to(img_width - grid_image_right_margin, end_y)

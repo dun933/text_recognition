@@ -2,7 +2,7 @@ import cv2, numpy as np , random , math
 random.seed()
 
 def apply_salt_and_pepper(inputmat, amount=0.01, sp_ratio=0.5):
-	print('image_augmentation_fns.apply_salt_and_pepper.amount=',amount)
+	#print('image_augmentation_fns.apply_salt_and_pepper.amount=',amount)
 	s_vs_p = sp_ratio
 	# Salt mode
 	img_h, img_w, _ = inputmat.shape
@@ -24,13 +24,13 @@ def apply_salt_and_pepper(inputmat, amount=0.01, sp_ratio=0.5):
 	return inputmat
 
 def apply_gaussian_blur(inputmat, blur_val=1):
-	print('image_augmentation_fns.apply_gaussian_blur.blur_val=',blur_val)
+	#print('image_augmentation_fns.apply_gaussian_blur.blur_val=',blur_val)
 	val = blur_val * 2 + 1
 	blur = cv2.GaussianBlur(inputmat, (val, val), 0)
 	return blur
 
 def apply_motion_blur(inputmat, size):
-	print('image_augmentation_fns.apply_motion_blur')
+	#print('image_augmentation_fns.apply_motion_blur')
 	# generating the kernel
 	kernel_motion_blur = np.zeros((size, size))
 	kernel_motion_blur[int((size-1)/2), :] = np.ones(size)
@@ -41,7 +41,7 @@ def apply_motion_blur(inputmat, size):
 	return blur
 
 def apply_low_res_by_resizing(inputmat, min_smaller_resize_ratio=0.5, max_smaller_resize_ratio=0.7,interpolation = cv2.INTER_CUBIC):
-	print('image_augmentation_fns.apply_low_res_by_resizing')
+	#print('image_augmentation_fns.apply_low_res_by_resizing')
 	img_h, img_w, _ = inputmat.shape
 	smaller_resize_ratio = random.uniform(min_smaller_resize_ratio, max_smaller_resize_ratio)
 	small_imgmat = cv2.resize(inputmat, None, fx = smaller_resize_ratio, fy = smaller_resize_ratio, interpolation = interpolation)
@@ -49,7 +49,7 @@ def apply_low_res_by_resizing(inputmat, min_smaller_resize_ratio=0.5, max_smalle
 	return restored_imgmat
 
 def apply_invert(inputmat):
-	print('image_augmentation_fns.apply_invert')
+	#print('image_augmentation_fns.apply_invert')
 	inverted_imgmat = 255 - inputmat
 	return inverted_imgmat
 
@@ -61,7 +61,7 @@ def apply_jpeg_compression(img, min_intensity=60, max_intensity=100):
 	return cv2.imdecode(encimg, 1)
 
 def apply_contrast_brightness_random_adjustment(img:np.ndarray, alpha:float=1.0, beta:int=0) -> np.ndarray:
-	print('image_augmentation_fns.apply_contrast_brightness_random_adjustment')
+	#print('image_augmentation_fns.apply_contrast_brightness_random_adjustment')
 	if not isinstance(beta, numbers.Real) or not isinstance(alpha, numbers.Real):
 		raise TypeError
 
@@ -108,7 +108,7 @@ class PipeLineAugmentationManager(AugmentationManager):
 			random_float = random.random()
 			fn = fn_bundle[0]
 			fn_str_repr = fn_bundle[1]
-			if(font_size<22 and fn_str_repr=='ready_apply_low_res_by_resizing'):
+			if(font_size<18 and fn_str_repr=='ready_apply_low_res_by_resizing'):
 				continue
 
 			if random_float <= probability:

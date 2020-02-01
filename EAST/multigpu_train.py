@@ -6,7 +6,7 @@ from tensorflow.contrib import slim
 pretrained_model_path='models/resnet_v1_50.ckpt'
 ckpt_path='outputs/'
 
-tf.app.flags.DEFINE_integer('input_size', 512, '')
+tf.app.flags.DEFINE_integer('input_size', 320, '')
 tf.app.flags.DEFINE_integer('batch_size_per_gpu', 16, '')
 tf.app.flags.DEFINE_integer('num_readers', 8, '')
 tf.app.flags.DEFINE_float('learning_rate', 0.0001, '')
@@ -133,7 +133,7 @@ def main(argv=None):
     with tf.control_dependencies([variables_averages_op, apply_gradient_op, batch_norm_updates_op]):
         train_op = tf.no_op(name='train_op')
 
-    saver = tf.train.Saver(tf.global_variables())
+    saver = tf.train.Saver(tf.global_variables(), max_to_keep=50)
     summary_writer = tf.summary.FileWriter(FLAGS.checkpoint_path, tf.get_default_graph())
 
     init = tf.global_variables_initializer()

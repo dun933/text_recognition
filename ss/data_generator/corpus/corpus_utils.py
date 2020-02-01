@@ -21,37 +21,44 @@ def get_single_word_from_composed_word(corpus_path):
        save_file.write(final_text)
     print("Done")
 
-def gen_random_serial_corpus(num_to_gen=500, length_of_word=4):  #generate serial
-    print("gen_random_serial_corpus",num_to_gen,length_of_word)
+def gen_random_serial_corpus(num_to_gen=1000, max_length=15):  #generate serial
+    print("gen_random_serial_corpus",num_to_gen,max_length)
     final_text=''
     for i in range(num_to_gen):
-        line=''.join(random.choices(string.ascii_lowercase + string.digits, k=length_of_word))
+        length_of_word=random.randint(2,max_length)
+        lower=random.choice([True, False])
+        if lower:
+            line=''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(length_of_word))
+        else:
+            line=''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length_of_word))
         final_text+=line+'\n'
 
-    with open("textimg_data_generator_dev/corpus/random_serial_"+str(num_to_gen)+".txt", "w") as save_file:
+    with open("random_serial_"+str(num_to_gen)+".txt", "w") as save_file:
        save_file.write(final_text)
     print("Done")
 
-def gen_random_number_corpus(num_to_gen=500, length_of_word=4): #generate number with/without dot or comma
-    print("gen_number_corpus",num_to_gen,length_of_word)
+def gen_random_number_corpus(num_to_gen=1000, max_length=12): #generate number with/without dot or comma
+    print("gen_number_corpus",num_to_gen,max_length)
     final_text = ''
     for i in range(num_to_gen):
-        line = ''.join(random.choices(string.digits, k=1))+''.join(random.choices('.,0123456789.,', k=1))+''.join(random.choices(string.digits, k=length_of_word-2))
+        length_of_word=random.randint(1,max_length)
+        line = ''.join(random.choice(string.digits))+''.join(random.choice('.,0123456789.,'))+''.join(random.choice(string.digits) for _ in range(length_of_word))
         final_text += line + '\n'
 
-    with open("textimg_data_generator_dev/corpus/random_number_" + str(num_to_gen) + ".txt", "w") as save_file:
+    with open("random_number_" + str(num_to_gen) + ".txt", "w") as save_file:
         save_file.write(final_text)
 
-def gen_random_symbol_corpus(num_to_gen=300, length_of_word=4): #generate symbol
-    print("gen_number_corpus",num_to_gen,length_of_word)
+def gen_random_symbol_corpus(num_to_gen=300, max_length=4): #generate symbol
+    print("gen_number_corpus",num_to_gen,max_length)
     symbol_char = '*:,@$.-(#%\'\")/~!^&_+={}[]\;<>?※”'
     symbol_char_list = [x for x in symbol_char]
     final_text = ''
     for i in range(num_to_gen):
-        line = ''.join(random.choices(symbol_char_list, k=length_of_word))
+        length_of_word=random.randint(1,max_length)
+        line = ''.join(random.choice(symbol_char_list)  for _ in range(length_of_word))
         final_text += line + '\n'
 
-    with open("textimg_data_generator_dev/corpus/random_symbol_" + str(num_to_gen) + ".txt", "w") as save_file:
+    with open("random_symbol_" + str(num_to_gen) + ".txt", "w") as save_file:
         save_file.write(final_text)
 
 def gen_final_corpus(corpus_dir=''):
@@ -62,8 +69,8 @@ def gen_final_corpus(corpus_dir=''):
         'Viet_1474_no_accent.txt',
         'Abbreviation.txt',
         'Additional.txt',
-        'random_number_500.txt',
-        'random_serial_500.txt',
+        'random_number_1000.txt',
+        'random_serial_1000.txt',
         'random_symbol_300.txt'
     ]
     final_corpus=[]
@@ -91,7 +98,7 @@ def gen_final_corpus(corpus_dir=''):
         print(count,corpus)
         final_str+=corpus+'\n'
 
-    save_filename=os.path.join(corpus_dir,'final_corpus_30Jan.txt')
+    save_filename=os.path.join(corpus_dir,'final_corpus_31Jan.txt')
     print('Save corpus:',save_filename)
     with open(save_filename, "w", encoding='utf-8') as save_file:
         save_file.write(final_str)
@@ -99,4 +106,7 @@ def gen_final_corpus(corpus_dir=''):
 
 
 if __name__== "__main__":
+    #gen_random_serial_corpus()
+    #gen_random_number_corpus()
+    #gen_random_symbol_corpus()
     gen_final_corpus()

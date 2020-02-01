@@ -14,7 +14,7 @@ import tensorflow as tf
 
 from data_util import GeneratorEnqueuer
 
-tf.app.flags.DEFINE_string('training_data_path', '/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-30_21-20/images',
+tf.app.flags.DEFINE_string('training_data_path', '/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-31_14-26/images',
                            'training dataset to use')
 tf.app.flags.DEFINE_integer('max_image_large_side', 320,
                             'max image size of training')
@@ -102,7 +102,7 @@ def check_and_validate_polys(polys, tags, xxx_todo_changeme):
         p_area = polygon_area(poly)
         if abs(p_area) < 1:
             # print poly
-            print('invalid poly')
+            # print('invalid poly')
             continue
         if p_area > 0:
             print('poly in wrong direction')

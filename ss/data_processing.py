@@ -511,4 +511,4 @@ if __name__== "__main__":
     src='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_images2_ori_3'
     dst='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_img_jpg'
     #convert_png2jpg(src,dst)
-    check_icdar_sample('/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-30_21-20/images')
+    check_icdar_sample('/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-31_14-26/images')
