@@ -19,8 +19,8 @@ try:
     from lib.BoundingBox import *
     from lib.BoundingBoxes import *
 except ImportError:
-    from aicr_classification_train.lib.BoundingBox import *
-    from aicr_classification_train.lib.BoundingBoxes import *
+    from classifier.lib.BoundingBox import *
+    from classifier.lib.BoundingBoxes import *
 
 
 classes_vn = "ĂÂÊÔƠƯÁẮẤÉẾÍÓỐỚÚỨÝÀẰẦÈỀÌÒỒỜÙỪỲẢẲẨĐẺỂỈỎỔỞỦỬỶÃẴẪẼỄĨÕỖỠŨỮỸẠẶẬẸỆỊỌỘỢỤỰỴăâêôơưáắấéếíóốớúứýàằầèềìòồờùừỳảẳẩđẻểỉỏổởủửỷãẵẫẽễĩõỗỡũữỹạặậẹệịọộợụựỵ"
@@ -36,11 +36,11 @@ classes_number = '0123456789'
 class_list_number = [x for x in classes_number]
 
 
-chinese_file_path = "textimg_data_generator_dev/dataprovision/config/chinese.txt"
-class_list_chinese = list()
-if chinese_file_path is not None:
-    with open(chinese_file_path) as fp:
-        class_list_chinese = [c for c in fp.read(-1)]
+# chinese_file_path = "data_generator/dataprovision/config/chinese.txt"
+# class_list_chinese = list()
+# if chinese_file_path is not None:
+#     with open(chinese_file_path) as fp:
+#         class_list_chinese = [c for c in fp.read(-1)]
 
 class Evaluator:
     def GetF1ScoreMetrics(self, boundingboxes):

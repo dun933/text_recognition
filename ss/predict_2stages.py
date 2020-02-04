@@ -12,15 +12,15 @@ import cv2
 import numpy as np
 
 # import for detector
-from aicr_dssd_train.predict_core import SSD_Predict
-from aicr_dssd_train.utils.split_image import split_image_to_objs
-from aicr_dssd_train.utils.run_util import drawAnnotation, calculateIOU, calculateIOUCNX
-from aicr_dssd_train.utils.image_processing_util import zoomScaleFinder
+from detector.predict_core import SSD_Predict
+from detector.utils.split_image import split_image_to_objs
+from detector.utils.run_util import drawAnnotation, calculateIOU, calculateIOUCNX
+from detector.utils.image_processing_util import zoomScaleFinder
 
-from aicr_classification_train.lib.Evaluator import *
+from classifier.lib.Evaluator import *
 
 # import for classifier
-from aicr_classification_train.utils.utils import crop_from_img_square, crop_from_img_rectangle
+from classifier.utils.utils import crop_from_img_square, crop_from_img_rectangle
 from data_processing import draw_annot_by_text
 from aicr_classification_test.aicr.document.lineup import line_out, line_out2, line_out3
 
@@ -67,8 +67,8 @@ result_save_dir = 'outputs/predict_2stages_' + pred_time
 
 # img_dir = '/home/advlab/data/test_vn/Cello_data/test_image_vn/image_fix/'
 # GT_dir = '/home/advlab/data/test_vn/Cello_data/test_image_vn/v7/ground_truth/'
-img_dir = '/home/advlab/data/test_vn/Eval_data/imgs/'
-GT_dir = '/home/advlab/data/test_vn/Eval_data/anno/v1/'
+img_dir = '/home/duycuong/PycharmProjects/research_py3/text_recognition/data/Cello/imgs/'
+GT_dir = '/home/duycuong/PycharmProjects/research_py3/text_recognition/data/Cello/anno/'
 file_list=get_list_file_in_folder(img_dir)
 file_list = [x.replace('.png','').replace('.jpg','') for x in file_list]
 # classifier
@@ -77,7 +77,7 @@ thres_classifier12 = 0.35
 wh_ratio = 2
 rect_mode = 1
 model_classifier12_path = 'model/classifier_Cello.hdf5'
-with open('aicr_classification_train/config/classmap_2stages_228.json', 'r') as f:
+with open('classifier/config/classmap_2stages_228.json', 'r') as f:
     loaded_json = json.load(f)
 class_list = []
 for cls in loaded_json.keys():

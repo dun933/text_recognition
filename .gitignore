@@ -3,6 +3,7 @@
 *.swp
 *.pkl
 *.pth
+*.hdf5
 weights*
 
 #text-detection-ctpn
@@ -18,6 +19,7 @@ build/
 dist/
 checkpoints/
 checkpoints_*/
+warp-ctc/
 .idea/
 *.py[cod]
 *.c[cod]

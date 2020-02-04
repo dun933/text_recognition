@@ -2,8 +2,8 @@ try:
     from lib.BoundingBox import *
     from lib.utils import *
 except ImportError:
-    from aicr_classification_train.lib.BoundingBox import *
-    from aicr_classification_train.lib.utils import *
+    from classifier.lib.BoundingBox import *
+    from classifier.lib.utils import *
 
 
 class BoundingBoxes:

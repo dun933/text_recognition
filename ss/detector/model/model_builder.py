@@ -14,8 +14,8 @@ try:
     from model.ssd_layers import Normalize, PriorBox
     from model.coord_layer import CoordinateChannel2D
 except ImportError:
-    from aicr_dssd_train.model.ssd_layers import Normalize, PriorBox
-    from aicr_dssd_train.model.coord_layer import CoordinateChannel2D
+    from detector.model.ssd_layers import Normalize, PriorBox
+    from detector.model.coord_layer import CoordinateChannel2D
 
 def _conv_block_bn(net, filters, kernel_size, padding='same', strides=(1, 1), separble=False):
     if K.image_data_format() == 'channels_first':

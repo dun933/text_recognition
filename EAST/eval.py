@@ -12,6 +12,7 @@ test_set='Eval'
 output_dir='outputs/predict_'+test_set+'_'
 #ckpt_path='backup/2nd_train/'
 ckpt_path='outputs'
+save_crop=True
 
 tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set+'/imgs', '')
 tf.app.flags.DEFINE_string('gpu_list', '0', '')
@@ -128,6 +129,14 @@ def sort_poly(p):
         return p[[0, 3, 2, 1]]
 
 
+def crop_from_img_rectangle(img, box):
+    left = max(0, min(box[0][0],box[3][0]))
+    top = max(0, min(box[0][1],box[1][1]))
+    right = min(img.shape[1], max(box[1][0],box[2][0]))
+    bottom = min(img.shape[0], max(box[2][1],box[3][1]))
+    return img[top:bottom, left:right]
+
+
 def main(argv=None):
     import os
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu_list
@@ -180,13 +189,20 @@ def main(argv=None):
 
                 # save to file
                 if boxes is not None:
+                    basename_no_ext=os.path.basename(im_fn).split('.')[0]
+                    output_crop=os.path.join(FLAGS.output_dir,basename_no_ext)
                     res_file = os.path.join(
                         FLAGS.output_dir,
-                        '{}.txt'.format(
-                            os.path.basename(im_fn).split('.')[0]))
+                        '{}.txt'.format(basename_no_ext))
+                    if save_crop:
+                        try:
+                            os.makedirs(output_crop)
+                        except:
+                            pass
+
 
                     with open(res_file, 'w') as f:
-                        for box in boxes:
+                        for idx, box in enumerate(boxes):
                             # to avoid submitting errors
                             box = sort_poly(box.astype(np.int32))
                             if np.linalg.norm(box[0] - box[1]) < 5 or np.linalg.norm(box[3]-box[0]) < 5:
@@ -194,6 +210,9 @@ def main(argv=None):
                             f.write('{},{},{},{},{},{},{},{}\r\n'.format(
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
                             ))
+                            if save_crop:
+                                crop = crop_from_img_rectangle(im, box)
+                                cv2.imwrite(os.path.join(output_crop, str(idx) + '.jpg'), crop)
                             cv2.polylines(im[:, :, ::-1], [box.astype(np.int32).reshape((-1, 1, 2))], True, color=(0, 0, 255), thickness=2)
                 if FLAGS.write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))

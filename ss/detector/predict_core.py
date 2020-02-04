@@ -14,11 +14,11 @@ try:
     from utils.ssd_utils import BBoxUtility
     from utils.point_object import PointObject
 except ImportError:
-    from aicr_dssd_train.model.model_builder import SSD_AICR
+    from detector.model.model_builder import SSD_AICR
     #from aicr_dssd_train.model.model_builder_tuananh import SSD_AICR
     #from aicr_dssd_train.model.ssd_hector import SSD_AICR_v03
-    from aicr_dssd_train.utils.ssd_utils import BBoxUtility
-    from aicr_dssd_train.utils.point_object import PointObject
+    from detector.utils.ssd_utils import BBoxUtility
+    from detector.utils.point_object import PointObject
 
 np.set_printoptions(suppress=True)
 dl = logging.getLogger("debug")

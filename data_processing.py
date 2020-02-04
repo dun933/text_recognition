@@ -16,8 +16,6 @@ def convert_jpg2png(src_dir,dst_dir):
         img =cv2.imread(src_path)
         cv2.imwrite(dst_path,img)
 
-
-
 if __name__ == "__main__":
     src='/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/data/bg_img_jpg'
     dst='/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/data/bg_img_png'
