@@ -9,18 +9,17 @@ from torch.nn.functional import softmax
 import numpy as np
 import time, os, cv2
 
-img_dir='../EAST/outputs/predict_Eval_model.ckpt-45451/SCAN_20191128_145142994_002'
+img_dir='../EAST/outputs/predict_level4_model.ckpt-45451/190715070257082_8478187434_pod'
 img_path=''
-alphabet_path='data_icdar/char'
-model_path='outputs/netCRNN_43.pth'
-debug=False
-
+alphabet_path='data/char'
+model_path='outputs/AICR_CRNN_19.pth'
+debug=True
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--img', default=img_path, help='path to img')
 parser.add_argument('--alphabet', default=alphabet_path, help='path to vocab')
 parser.add_argument('--model', default=model_path, help='path to model')
-parser.add_argument('--imgW', type=int, default=256, help='path to model')
+parser.add_argument('--imgW', type=int, default=128, help='path to model')
 parser.add_argument('--imgH', type=int, default=32, help='path to model')
 
 opt = parser.parse_args()
@@ -46,8 +45,8 @@ converter = strLabelConverter(alphabet, ignore_case=False)
 
 begin = time.time()
 
-list_files=get_list_file_in_folder(img_dir)
-total_file=len(list_files)
+list_files = get_list_file_in_folder(img_dir)
+total_file = len(list_files)
 print('Predict:',total_file,'files')
 
 for file in list_files:
@@ -62,7 +61,6 @@ for file in list_files:
     image = Variable(image)
 
     model.eval()
-
     preds = model(image)
 
     values, prob = softmax(preds, dim=-1).max(2)
@@ -72,17 +70,17 @@ for file in list_files:
     _, preds = preds.max(2)
     preds = preds.transpose(1, 0).contiguous().view(-1)
     preds_size = Variable(torch.IntTensor([preds.size(0)]))
-    #raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
+    raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
     sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
-    print(sim_pred)
+    print(raw_pred, '=>', sim_pred)
     if debug:
         img = cv2.imread(img_path)
-        cv2.imshow(sim_pred,img)
+        cv2.imshow('result',img)
         cv2.waitKey(0)
 
 
 end = time.time()
-processing_time=end-begin
+processing_time = end - begin
 print('Processing time:',processing_time)
 print('Speed:', total_file/processing_time, 'fps')
 

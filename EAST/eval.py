@@ -8,13 +8,14 @@ import tensorflow as tf
 import locality_aware_nms as nms_locality
 import lanms
 
-test_set='Eval'
+test_set='level4'
 output_dir='outputs/predict_'+test_set+'_'
-#ckpt_path='backup/2nd_train/'
+ckpt_path='backup/2nd_train/'
 ckpt_path='outputs'
 save_crop=True
+thickness=1
 
-tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set+'/imgs', '')
+tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set, '')
 tf.app.flags.DEFINE_string('gpu_list', '0', '')
 tf.app.flags.DEFINE_string('checkpoint_path', ckpt_path, '')
 tf.app.flags.DEFINE_string('output_dir', output_dir, '')
@@ -213,7 +214,7 @@ def main(argv=None):
                             if save_crop:
                                 crop = crop_from_img_rectangle(im, box)
                                 cv2.imwrite(os.path.join(output_crop, str(idx) + '.jpg'), crop)
-                            cv2.polylines(im[:, :, ::-1], [box.astype(np.int32).reshape((-1, 1, 2))], True, color=(0, 0, 255), thickness=2)
+                            cv2.polylines(im[:, :, ::-1], [box.astype(np.int32).reshape((-1, 1, 2))], True, color=(0, 0, 255), thickness=thickness)
                 if FLAGS.write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
                     cv2.imwrite(img_path, im[:, :, ::-1])

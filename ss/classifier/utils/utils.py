@@ -14,7 +14,7 @@ from pygments.lexer import combined
 try:
     from utils.self_augmentation import *
 except ImportError:
-    from aicr_classification_train.utils.self_augmentation import *
+    from classifier.utils.self_augmentation import *
 
 now = datetime.now()
 padding=20

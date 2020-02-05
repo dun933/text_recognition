@@ -134,7 +134,6 @@ def val(net, data_loader, criterion, max_iter=1000):
             cer_loss = utils.cer_loss(sim_preds, cpu_texts)
             val_cer_avg.add(cer_loss)
 
-
     raw_preds = converter.decode(preds.data, preds_size.data, raw=True)[:opt.n_test_disp]
     for raw_pred, pred, gt in zip(raw_preds, sim_preds, cpu_texts):
         print('%-30s => %-30s, gt: %-30s' % (raw_pred, pred, gt))
