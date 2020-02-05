@@ -4,7 +4,7 @@ import time
 
 
 icdar_dir='/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-31_14-26/images'
-output_dir='/home/duycuong/PycharmProjects/dataset/aicr_icdar'
+output_dir='/home/duycuong/PycharmProjects/dataset/aicr_icdar_new'
 
 def get_list_file_in_folder(dir, ext='png'):
     included_extensions = ['png', 'jpg']
@@ -13,9 +13,12 @@ def get_list_file_in_folder(dir, ext='png'):
     return file_names
 
 def crop_from_img_rectangle(img, left, top, right, bottom):
-    extend_y= max(int((bottom-top) / 8), 2)
+    extend_y= max(int((bottom-top) / 3), 4)
+    extend_x=int(extend_y/2)
     top = max(0, top-extend_y)
     bottom = min(img.shape[0], bottom+extend_y)
+    left = max(0, left-extend_x)
+    right = min(img.shape[1], right+extend_x)
     if left>=right or top>=bottom or left<0 or right<0 or left >=img.shape[1] or right >=img.shape[1]:
         return None
     return img[top:bottom, left:right]
@@ -30,7 +33,7 @@ def prepare_train_from_icdar(data_dir, output_dir):
     list_files=get_list_file_in_folder(data_dir)
     train_txt=''
     test_txt=''
-    max_w=0
+    max_wh=0
     count=0
     for idx, file in enumerate(list_files):
         # if(idx>1000):
@@ -56,8 +59,8 @@ def prepare_train_from_icdar(data_dir, output_dir):
             crop = crop_from_img_rectangle(img, left, top, right, bottom)
             if crop is None or val=='':
                 continue
-            if(crop.shape[1]>max_w):
-                max_w=crop.shape[1]
+            if((crop.shape[1]/crop.shape[0])>max_wh):
+                max_wh=crop.shape[1]/crop.shape[0]
             count+=1
             base_crop_name = base_name + '_' + str(index)
             if(random.randint(0,4)==0):
@@ -74,7 +77,7 @@ def prepare_train_from_icdar(data_dir, output_dir):
         f.write(train_txt)
     with open(os.path.join(output_dir,'test'), 'w', encoding='utf-8') as f:
         f.write(test_txt)
-    print('max_width in dataset',max_w)
+    print('max width height ratio in dataset',max_wh)
     print('Total word:',count)
 
 if __name__ == "__main__":

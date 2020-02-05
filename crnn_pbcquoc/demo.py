@@ -9,17 +9,17 @@ from torch.nn.functional import softmax
 import numpy as np
 import time, os, cv2
 
-img_dir='../EAST/outputs/predict_level4_model.ckpt-45451/190715070257082_8478187434_pod'
+img_dir='../EAST/outputs/predict_Eval_model.ckpt-45451/SCAN_20191128_145142994_002'
 img_path=''
 alphabet_path='data/char'
-model_path='outputs/AICR_CRNN_19.pth'
+model_path='outputs/AICR_CRNN_7.pth'
 debug=True
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--img', default=img_path, help='path to img')
 parser.add_argument('--alphabet', default=alphabet_path, help='path to vocab')
 parser.add_argument('--model', default=model_path, help='path to model')
-parser.add_argument('--imgW', type=int, default=128, help='path to model')
+parser.add_argument('--imgW', type=int, default=256, help='path to model')
 parser.add_argument('--imgH', type=int, default=32, help='path to model')
 
 opt = parser.parse_args()

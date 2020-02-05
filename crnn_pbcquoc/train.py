@@ -19,7 +19,7 @@ from torchsummary import summary
 
 import models.crnn as crnn
 
-root_dir='/home/duycuong/PycharmProjects/dataset/aicr_icdar'
+root_dir='/home/duycuong/PycharmProjects/dataset/aicr_icdar_new'
 pretrained=''
 ckpt_dir='outputs'
 
@@ -30,7 +30,7 @@ parser.add_argument('--val', default='test', help='path to test set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=8)
 parser.add_argument('--batch_size', type=int, default=128, help='input batch size')
 parser.add_argument('--imgH', type=int, default=32, help='the height of the input image to network')
-parser.add_argument('--imgW', type=int, default=128, help='the width of the input image to network')
+parser.add_argument('--imgW', type=int, default=256, help='the width of the input image to network')
 parser.add_argument('--nh', type=int, default=256, help='size of the lstm hidden state')
 parser.add_argument('--nepoch', type=int, default=100, help='number of epochs to train for')
 parser.add_argument('--cuda', action='store_false', help='enables cuda')
@@ -197,7 +197,10 @@ for epoch in range(1, opt.nepoch+1):
     train_cer_avg.reset()
 
     if epoch % opt.valInterval == 0:
+        begin_val = time.time()
         val(crnn, test_loader, criterion)
+        end_val = time.time()
+        print('Time for val:',end_val-begin_val,'seconds')
 
     # do checkpointing
     if epoch % opt.saveInterval == 0:

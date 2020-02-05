@@ -27,8 +27,4 @@ warp-ctc/
 *.swp
 *.pb
 *.ckpt
-text-detection-ctpn/checkpoints_mlt
-data/classifier/
-data/detector/
-data/icdar/
 warp-ctc/

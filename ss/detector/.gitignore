@@ -1,7 +1,0 @@
-checkpoints
-ssd_logs
-dataset
-data
-outputs/
-*.log
-**/__pycache__
