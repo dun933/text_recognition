@@ -8,14 +8,14 @@ import tensorflow as tf
 import locality_aware_nms as nms_locality
 import lanms
 
-test_set='Eval'
+test_set='level4'
 output_dir='outputs/predict_'+test_set+'_'
 ckpt_path='backup/2nd_train/'
 ckpt_path='outputs'
 save_crop=True
 thickness=1
 
-tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set+'/imgs', '')
+tf.app.flags.DEFINE_string('test_data_path', '../data/'+test_set+'', '')
 tf.app.flags.DEFINE_string('gpu_list', '0', '')
 tf.app.flags.DEFINE_string('checkpoint_path', ckpt_path, '')
 tf.app.flags.DEFINE_string('output_dir', output_dir, '')

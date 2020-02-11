@@ -9,10 +9,10 @@ from torch.nn.functional import softmax
 import numpy as np
 import time, os, cv2
 
-img_dir='../EAST/outputs/predict_Eval_model.ckpt-45451/SCAN_20191128_145142994_002'
+img_dir='../EAST_argman/outputs/predict_level4_model.ckpt-45451/190715070257082_8478187434_pod'
 img_path=''
 alphabet_path='data/char'
-model_path='outputs/AICR_CRNN_7.pth'
+model_path='outputs/train2_bigger_bbox_w256/AICR_CRNN_11.pth'
 debug=True
 
 parser = argparse.ArgumentParser()
