@@ -10,11 +10,12 @@ import math, time
 
 exp='config/aicr_ic15_resnet18.yaml'
 img_path='/home/duycuong/PycharmProjects/research_py3/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_002.jpg'
-model_name='ic15_resnet18'
-ckpt_path='models/'+model_name
+model_name='model_epoch_115_minibatch_72000'
+ckpt_path='outputs/workspace/DB_Liao/outputs/train_2020-02-12_20-59/model/'+model_name
 polygon=False
 visualize=True
-box_thres=0.31
+box_thres=0.315
+img_short_side=1200 #736
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
@@ -142,13 +143,13 @@ class Demo:
             batch['image'] = img
             begin = time.time()
             pred = model.forward(batch, training=False)
-            end = time.time()
-            print('ellapse time:', 1000*(end-begin), 'miliseconds')
             output = self.structure.representer.represent(batch, pred, is_output_polygon=self.args['polygon']) 
             if not os.path.isdir(self.args['result_dir']):
                 os.mkdir(self.args['result_dir'])
             self.format_output(batch, output)
 
+            end = time.time()
+            print('ellapse time:', 1000*(end-begin), 'miliseconds')
             if visualize and self.structure.visualizer:
                 vis_image = self.structure.visualizer.demo_visualize(image_path, output)
                 cv2.imwrite(os.path.join(self.args['result_dir'], image_path.split('/')[-1].split('.')[0]+'_'+model_name+'_'+str(box_thres)+'.jpg'), vis_image)

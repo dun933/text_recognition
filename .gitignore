@@ -1,3 +1,7 @@
+
+workspace/
+demo_results/
+
 #CRAFT-pytorch
 *.pyc
 *.swp

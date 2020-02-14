@@ -20,11 +20,11 @@ from datetime import datetime
 #import cv2
 #cv2.setNumThreads(0)
 
-config_file='config/aicr.yaml'
+config_file='config/aicr_ic15_resnet18.yaml'
 training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
 training_dir='outputs/train_'+training_time
-resume_ckpt='outputs/workspace/DB_Liao/outputs/train_2020-02-09_22-10/model/model_epoch_52_minibatch_65000'
-#resume_ckpt=''
+resume_ckpt='models/pre-trained-model-synthtext-resnet18'
+resume_ckpt='outputs/workspace/DB_Liao/outputs/train_2020-02-11_18-54/model/model_epoch_216_minibatch_135000'
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--name', type=str, default=training_dir)
     parser.add_argument('--batch_size', type=int, help='Batch size for training')
     parser.add_argument('--resume', type=str, default=resume_ckpt, help='Resume from checkpoint')
+    #parser.add_argument('--resume', type=str, help='Resume from checkpoint')
     parser.add_argument('--epochs', type=int, help='Number of training epochs')
     parser.add_argument('--num_workers', type=int, help='Number of dataloader workers')
     parser.add_argument('--start_iter', type=int, help='Begin counting iterations starting from this value (should be used with resume)')

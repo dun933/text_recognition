@@ -1,5 +1,5 @@
 import:
-    - 'config/base_ic15.yaml'
+    - '/home/duycuong/PycharmProjects/research_py3/text_recognition/DB_Liao/config/base_ic15.yaml'
 package: []
 define:
   - name: 'Experiment'
@@ -31,7 +31,7 @@ define:
             class: DataLoader
             dataset: ^train_data
             batch_size: 16
-            num_workers: 16
+            num_workers: 8
         checkpoint: 
             class: Checkpoint
             start_epoch: 0
@@ -46,7 +46,7 @@ define:
             class: OptimizerScheduler
             optimizer: "SGD"
             optimizer_args:
-                lr: 0.007
+                lr: 0.005856
                 momentum: 0.9
                 weight_decay: 0.0001
             learning_rate:  
@@ -72,6 +72,6 @@ define:
         class: Logger
         verbose: true
         level: info
-        log_interval: 450
+        log_interval: 100
 
     evaluation: *validate

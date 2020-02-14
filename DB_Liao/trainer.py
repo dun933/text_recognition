@@ -130,7 +130,8 @@ class Trainer:
                 log_info = '\t'.join(['step:{:6d}', 'epoch:{:3d}', '{}', 'lr:{:.4f}']).format(step, epoch, line, self.current_lr)
                 self.logger.info(log_info)
             else:
-                self.logger.info('\ntrain step: %6d, epoch: %3d, loss: %.6f, lr: %f' % (
+                self.logger.info('\n')
+                self.logger.info('train step: %6d, epoch: %3d, loss: %.6f, lr: %f' % (
                     step, epoch, loss.item(), self.current_lr))
             self.logger.add_scalar('train_loss', loss, step)
             self.logger.add_scalar('learning_rate', self.current_lr, step)
