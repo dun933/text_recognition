@@ -120,55 +120,55 @@ class Detector_DB:
 
             return boxes
 
-# from crnn_pbcquoc.models.utils import strLabelConverter, resizePadding
-# from PIL import Image
-# from torch.autograd import Variable
-# import crnn_pbcquoc.models.crnn as crnn
-# from torch.nn.functional import softmax
-#
-# debug=True
-#
-# class Classifier_CRNN:
-#     def __init__(self, ckpt_path='', num_channel = 3, alphabet_path='crnn_pbcquoc/data/char'):
-#         self.imgW = classifier_width
-#         self.imgH = classifier_height
-#         alphabet = open(alphabet_path).read().rstrip()
-#         nclass = len(alphabet) + 1
-#         self.converter = strLabelConverter(alphabet, ignore_case=False)
-#         self.model = crnn.CRNN(self.imgH, num_channel, nclass, self.imgW)
-#         if torch.cuda.is_available():
-#             self.model = self.model.cuda()
-#         print('loading pretrained model from %s' % ckpt_path)
-#         self.model.load_state_dict(torch.load(ckpt_path, map_location='cpu'))
-#
-#
-#     def inference(self, img_path, visualize=False):
-#         image = Image.open(img_path).convert('RGB')
-#         image = resizePadding(image, self.imgW, self.imgH)
-#
-#         if torch.cuda.is_available():
-#             image = image.cuda()
-#
-#         image = image.view(1, *image.size())
-#         image = Variable(image)
-#
-#         self.model.eval()
-#         preds = self.model(image)
-#
-#         values, prob = softmax(preds, dim=-1).max(2)
-#         preds_idx = (prob > 0).nonzero()
-#         sent_prob = values[preds_idx[:, 0], preds_idx[:, 1]].mean().item()
-#
-#         _, preds = preds.max(2)
-#         preds = preds.transpose(1, 0).contiguous().view(-1)
-#         preds_size = Variable(torch.IntTensor([preds.size(0)]))
-#         raw_pred = self.converter.decode(preds.data, preds_size.data, raw=True)
-#         sim_pred = self.converter.decode(preds.data, preds_size.data, raw=False)
-#         print(raw_pred, '=>', sim_pred)
-#         if debug:
-#             img = cv2.imread(img_path)
-#             cv2.imshow('result', img)
-#             cv2.waitKey(0)
+from crnn_pbcquoc.models.utils import strLabelConverter, resizePadding
+from PIL import Image
+from torch.autograd import Variable
+import crnn_pbcquoc.models.crnn as crnn
+from torch.nn.functional import softmax
+
+debug=True
+
+class Classifier_CRNN:
+    def __init__(self, ckpt_path='', num_channel = 3, alphabet_path='crnn_pbcquoc/data/char'):
+        self.imgW = classifier_width
+        self.imgH = classifier_height
+        alphabet = open(alphabet_path).read().rstrip()
+        nclass = len(alphabet) + 1
+        self.converter = strLabelConverter(alphabet, ignore_case=False)
+        self.model = crnn.CRNN(self.imgH, num_channel, nclass, self.imgW)
+        if torch.cuda.is_available():
+            self.model = self.model.cuda()
+        print('loading pretrained model from %s' % ckpt_path)
+        self.model.load_state_dict(torch.load(ckpt_path, map_location='cpu'))
+
+
+    def inference(self, img_path, visualize=False):
+        image = Image.open(img_path).convert('RGB')
+        image = resizePadding(image, self.imgW, self.imgH)
+
+        if torch.cuda.is_available():
+            image = image.cuda()
+
+        image = image.view(1, *image.size())
+        image = Variable(image)
+
+        self.model.eval()
+        preds = self.model(image)
+
+        values, prob = softmax(preds, dim=-1).max(2)
+        preds_idx = (prob > 0).nonzero()
+        sent_prob = values[preds_idx[:, 0], preds_idx[:, 1]].mean().item()
+
+        _, preds = preds.max(2)
+        preds = preds.transpose(1, 0).contiguous().view(-1)
+        preds_size = Variable(torch.IntTensor([preds.size(0)]))
+        raw_pred = self.converter.decode(preds.data, preds_size.data, raw=True)
+        sim_pred = self.converter.decode(preds.data, preds_size.data, raw=False)
+        print(raw_pred, '=>', sim_pred)
+        if debug:
+            img = cv2.imread(img_path)
+            cv2.imshow('result', img)
+            cv2.waitKey(0)
 
 import argparse
 exp='DB_Liao/config/aicr_ic15_resnet18.yaml'
@@ -180,7 +180,6 @@ visualize=False
 box_thres=0.315
 img_short_side=736 #736
 
-def
 
 def convert_boxes(boxes):
     new_boxes=[]
@@ -222,6 +221,8 @@ def main():
     detector= Detector_DB(experiment, experiment_args, cmd=args)
     boxes_list = detector.inference(args['image_path'], args['visualize'])
     convert_boxes(boxes_list)
+
+
 
 if __name__ == '__main__':
     main()
