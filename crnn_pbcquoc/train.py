@@ -16,28 +16,41 @@ from loader import DatasetLoader
 from multiprocessing import cpu_count
 from tqdm import tqdm
 from torchsummary import summary
-
 import models.crnn as crnn
+from datetime import datetime
 
-root_dir='/home/duycuong/PycharmProjects/dataset/aicr_icdar_new'
-pretrained=''
-ckpt_dir='outputs'
+
+training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
+training_dir='outputs/train_'+training_time
+root_dir='/data/dataset/cinnamon_data'
+pretrained='/home/aicr/cuongnd/text_recognition/crnn_pbcquoc/outputs/train_2020-02-19_18-06/AICR_pretrained_24.pth'
+imgW=512
+imgH=32
+
+class writer:
+    def __init__(self, *writers):
+        self.writers = writers
+    def write(self, text):
+        for w in self.writers:
+            w.write(text)
+    def flush(self):
+        pass
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=root_dir, help='path to root folder')
 parser.add_argument('--train', default='train', help='path to train set')
 parser.add_argument('--val', default='test', help='path to test set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=8)
-parser.add_argument('--batch_size', type=int, default=128, help='input batch size')
-parser.add_argument('--imgH', type=int, default=32, help='the height of the input image to network')
-parser.add_argument('--imgW', type=int, default=256, help='the width of the input image to network')
+parser.add_argument('--batch_size', type=int, default=64, help='input batch size')
+parser.add_argument('--imgH', type=int, default=imgH, help='the height of the input image to network')
+parser.add_argument('--imgW', type=int, default=imgW, help='the width of the input image to network')
 parser.add_argument('--nh', type=int, default=256, help='size of the lstm hidden state')
 parser.add_argument('--nepoch', type=int, default=100, help='number of epochs to train for')
 parser.add_argument('--cuda', action='store_false', help='enables cuda')
 parser.add_argument('--gpu', type=int, default=0, help='list of GPUs to use')
 parser.add_argument('--pretrained', default=pretrained, help="path to pretrained model (to continue training)")
 parser.add_argument('--alphabet', type=str, default='char', help='path to char in labels')
-parser.add_argument('--expr_dir', default=ckpt_dir, type=str, help='Where to store samples and models')
+parser.add_argument('--expr_dir', default=training_dir, type=str, help='Where to store samples and models')
 parser.add_argument('--displayInterval', type=int, default=1, help='Interval to be displayed')
 parser.add_argument('--n_test_disp', type=int, default=10, help='Number of samples to display when test')
 parser.add_argument('--valInterval', type=int, default=1, help='Interval to be displayed')
@@ -45,11 +58,18 @@ parser.add_argument('--saveInterval', type=int, default=1, help='Interval to be 
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate for Critic, not used by adadealta')
 parser.add_argument('--manualSeed', type=int, default=1234, help='reproduce experiemnt')
 opt = parser.parse_args()
-print(opt)
-os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu)
 
 if not os.path.exists(opt.expr_dir):
     os.makedirs(opt.expr_dir)
+saved = sys.stdout
+log_file = os.path.join(opt.expr_dir, "train.log")
+print('Please check output of training process in:', log_file)
+f = open(log_file, 'w')
+sys.stdout = writer(sys.stdout, f)
+
+print(opt)
+os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu)
+
 
 random.seed(opt.manualSeed)
 np.random.seed(opt.manualSeed)
@@ -163,22 +183,9 @@ def trainBatch(net, data, criterion, optimizer):
     cer_loss = utils.cer_loss(sim_preds, cpu_texts)
     return cost, cer_loss, len(cpu_images)
 
-class writer:
-    def __init__(self, *writers):
-        self.writers = writers
-    def write(self, text):
-        for w in self.writers:
-            w.write(text)
-    def flush(self):
-        pass
-
-saved = sys.stdout
-log_file = os.path.join(opt.expr_dir, "train.log")
-print('Please check output of training process in:', log_file)
-f = open(log_file, 'w')
-sys.stdout = writer(sys.stdout, f)
 
 for epoch in range(1, opt.nepoch+1):
+    print('\nStart training epoch',epoch)
     begin=time.time()
     t = tqdm(iter(train_loader), total=len(train_loader), desc='Epoch {}'.format(epoch))
     for i, data in enumerate(t):
@@ -205,7 +212,7 @@ for epoch in range(1, opt.nepoch+1):
     # do checkpointing
     if epoch % opt.saveInterval == 0:
         torch.save(
-            crnn.state_dict(), '{}/AICR_CRNN_{}.pth'.format(opt.expr_dir, epoch))
+            crnn.state_dict(), '{}/AICR_pretrained_{}.pth'.format(opt.expr_dir, epoch))
     end=time.time()
     print('Time for epoch:',end-begin,'seconds')
 

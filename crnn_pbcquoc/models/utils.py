@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 import collections
 import Levenshtein
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
 from PIL import Image
 from torchvision.transforms import ToTensor, Normalize
@@ -14,26 +14,26 @@ from torchvision.transforms import ToTensor, Normalize
 mean=[0.485, 0.456, 0.406]
 std=[0.229, 0.224, 0.225]
 
-class BeamSearchDecoder():
-    def __init__(self, lib, corpus, chars, word_chars, beam_width=20, lm_type='Words', lm_smoothing=0.01, tfsess=None):
-        word_beam_search_module = tf.load_op_library(lib)
-        self.mat = tf.placeholder(tf.float32)
-        corpus = open(corpus).read()
-        chars = open(chars).read()
-        word_chars = open(word_chars).read()
-
-        self.beamsearch_decoder = word_beam_search_module.word_beam_search(self.mat, beam_width, lm_type, lm_smoothing, corpus, chars, word_chars)
-        self.tfsess = tfsess or tf.Session()
-        self.idx2char = dict(zip(range(0, len(chars)), chars))
-
-    def beamsearch(self, mat):
-        
-        mat = np.concatenate((mat[:,:, 1:], mat[:,:,:1]), axis=-1)
-        results=self.tfsess.run(self.beamsearch_decoder, {self.mat:mat})
-        return results
-
-    def decode(self, preds_idx):
-        return [''.join([self.idx2char[idx] for idx in row if idx < len(self.idx2char)]) for row in preds_idx]
+# class BeamSearchDecoder():
+#     def __init__(self, lib, corpus, chars, word_chars, beam_width=20, lm_type='Words', lm_smoothing=0.01, tfsess=None):
+#         word_beam_search_module = tf.load_op_library(lib)
+#         self.mat = tf.placeholder(tf.float32)
+#         corpus = open(corpus).read()
+#         chars = open(chars).read()
+#         word_chars = open(word_chars).read()
+#
+#         self.beamsearch_decoder = word_beam_search_module.word_beam_search(self.mat, beam_width, lm_type, lm_smoothing, corpus, chars, word_chars)
+#         self.tfsess = tfsess or tf.Session()
+#         self.idx2char = dict(zip(range(0, len(chars)), chars))
+#
+#     def beamsearch(self, mat):
+#
+#         mat = np.concatenate((mat[:,:, 1:], mat[:,:,:1]), axis=-1)
+#         results=self.tfsess.run(self.beamsearch_decoder, {self.mat:mat})
+#         return results
+#
+#     def decode(self, preds_idx):
+#         return [''.join([self.idx2char[idx] for idx in row if idx < len(self.idx2char)]) for row in preds_idx]
 
 
 def resizePadding(img, width, height):
