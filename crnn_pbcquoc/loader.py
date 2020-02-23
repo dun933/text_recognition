@@ -59,18 +59,14 @@ class ImageFileList(data.Dataset):
         return len(self.imlist)
 
 class alignCollate(object):
-
     def __init__(self, imgW, imgH):
         self.imgH = imgH
         self.imgW = imgW
     
     def __call__(self, batch):
         images, labels = zip(*batch)
-        imgH = self.imgH
-        imgW = self.imgW
         images = [resizePadding(image, self.imgW, self.imgH) for image in images]
         images = torch.cat([t.unsqueeze(0) for t in images], 0)
-
         return images, labels
 
 
@@ -81,13 +77,11 @@ class DatasetLoader(object):
         self.test_file = os.path.join(root, test_file)
         self.imgW = imgW
         self.imgH = imgH
-
-        self.train_dataset = ImageFileList(root, self.train_file, transform=img_loader, target_transform=target_loader) 
+        self.train_dataset = ImageFileList(root, self.train_file, transform=img_loader, target_transform=target_loader)
         self.test_dataset = ImageFileList(root, self.test_file, transform=img_loader, target_transform=target_loader)
 
 
     def train_loader(self, batch_size, num_workers=4, shuffle=True):
-
         train_loader = torch.utils.data.DataLoader(
             self.train_dataset,
             batch_size=batch_size,
@@ -98,13 +92,13 @@ class DatasetLoader(object):
 
         return train_loader
 
-    def test_loader(self, batch_size, num_workers=4, shuffle=True):
+    def test_loader(self, batch_size, num_workers=4, shuffle=False):
         test_loader = torch.utils.data.DataLoader(
             self.test_dataset,
-            batch_size=batch_size,
-            num_workers=num_workers,
-            shuffle=True,
-            collate_fn=alignCollate(self.imgW, self.imgH)
+            batch_size =batch_size,
+            num_workers =num_workers,
+            shuffle =False,
+            collate_fn =alignCollate(self.imgW, self.imgH)
         )
 
         return test_loader
