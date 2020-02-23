@@ -19,24 +19,26 @@ from torchsummary import summary
 
 import models.crnn as crnn
 
-root_dir='/home/duycuong/PycharmProjects/dataset/aicr_icdar_new'
+root_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset'
 pretrained=''
 ckpt_dir='outputs'
+width=512
+height=32
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=root_dir, help='path to root folder')
 parser.add_argument('--train', default='train', help='path to train set')
 parser.add_argument('--val', default='test', help='path to test set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=8)
-parser.add_argument('--batch_size', type=int, default=128, help='input batch size')
-parser.add_argument('--imgH', type=int, default=32, help='the height of the input image to network')
-parser.add_argument('--imgW', type=int, default=256, help='the width of the input image to network')
+parser.add_argument('--batch_size', type=int, default=64, help='input batch size')
+parser.add_argument('--imgH', type=int, default=height, help='the height of the input image to network')
+parser.add_argument('--imgW', type=int, default=width, help='the width of the input image to network')
 parser.add_argument('--nh', type=int, default=256, help='size of the lstm hidden state')
 parser.add_argument('--nepoch', type=int, default=100, help='number of epochs to train for')
 parser.add_argument('--cuda', action='store_false', help='enables cuda')
 parser.add_argument('--gpu', type=int, default=0, help='list of GPUs to use')
 parser.add_argument('--pretrained', default=pretrained, help="path to pretrained model (to continue training)")
-parser.add_argument('--alphabet', type=str, default='char', help='path to char in labels')
+parser.add_argument('--alphabet', type=str, default='char_backup', help='path to char in labels')
 parser.add_argument('--expr_dir', default=ckpt_dir, type=str, help='Where to store samples and models')
 parser.add_argument('--displayInterval', type=int, default=1, help='Interval to be displayed')
 parser.add_argument('--n_test_disp', type=int, default=10, help='Number of samples to display when test')

@@ -23,6 +23,37 @@ def crop_from_img_rectangle(img, left, top, right, bottom):
         return None
     return img[top:bottom, left:right]
 
+def prepare_train_test_from_multidir(root_dir, list_dir, percentage=1.0, train_ratio=0.9):
+    all_files=[]
+    for dir in list_dir:
+        list_files=get_list_file_in_folder(os.path.join(root_dir,dir))
+        for file in list_files:
+            all_files.append(os.path.join(dir, file))
+
+    random.shuffle(all_files)
+    print('Total files',len(all_files))
+    num_files_use=int(percentage*len(all_files))
+    num_files_train=int(num_files_use*train_ratio)
+    num_files_val = num_files_use-num_files_train
+
+    print('train files',num_files_train)
+    print('val files',num_files_val)
+    train_files=all_files[0:num_files_train-1]
+    val_files=all_files[num_files_train:num_files_use-1]
+
+    train_txt=''
+    for file in train_files:
+        train_txt+=file+'\n'
+    with open(os.path.join(root_dir,'train'), 'w', encoding='utf-8') as f:
+        f.write(train_txt)
+
+    test_txt=''
+    for file in val_files:
+        test_txt+=file+'\n'
+    with open(os.path.join(root_dir,'test'), 'w', encoding='utf-8') as f:
+        f.write(test_txt)
+    print('Done')
+
 def prepare_train_from_icdar(data_dir, output_dir):
     try:
         os.makedirs(os.path.join(output_dir,'images'))
@@ -81,4 +112,7 @@ def prepare_train_from_icdar(data_dir, output_dir):
     print('Total word:',count)
 
 if __name__ == "__main__":
-    prepare_train_from_icdar(icdar_dir, output_dir)
+    root_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset'
+    list_dir=['en_00','en_01','InkData_line_processed','meta','vi_00','vi_01','random']
+    prepare_train_test_from_multidir(root_dir,list_dir)
+    #prepare_train_from_icdar(icdar_dir, output_dir)

@@ -220,7 +220,7 @@ def main():
     #initialize
     detector= Detector_DB(experiment, experiment_args, cmd=args)
     boxes_list = detector.inference(args['image_path'], args['visualize'])
-    convert_boxes(boxes_list)
+    new_boxes_list = convert_boxes(boxes_list)
 
 
 
