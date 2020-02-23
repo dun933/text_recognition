@@ -111,8 +111,58 @@ def prepare_train_from_icdar(data_dir, output_dir):
     print('max width height ratio in dataset',max_wh)
     print('Total word:',count)
 
+def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=0.95, convert=False):
+    list_dir_txt = []
+    print('root dir:',root_dir)
+    for dir in list_dir:
+        list_files=get_list_file_in_folder(os.path.join(root_dir, dir))
+        convert_json_to_multiple_gt(os.path.join(root_dir, dir))
+        print('Dir ',dir,'has',len(list_files),'files')
+        for idx, file in enumerate(list_files):
+            list_dir_txt.append(os.path.join(dir,file))
+
+    random.shuffle(list_dir_txt)
+    print('\ntotal files:',len(list_dir_txt))
+    num_files_to_use=int(percentage * len(list_dir_txt))
+    num_files_to_train=int(train_ratio*num_files_to_use)
+    num_files_to_test=num_files_to_use-num_files_to_train
+    print('\ntrain files:',num_files_to_train)
+    print('\ntest files:',num_files_to_test)
+
+    train_list=list_dir_txt[0:num_files_to_train-1]
+    test_list=list_dir_txt[num_files_to_train:num_files_to_use-1]
+
+    print('Write train test file')
+    train_txt=''
+    for train_file in train_list:
+        train_txt+=train_file+'\n'
+    with open(os.path.join(root_dir,'train'), 'w', encoding='utf-8') as f:
+        f.write(train_txt)
+
+    test_txt=''
+    for test_file in test_list:
+        test_txt+=test_file+'\n'
+    with open(os.path.join(root_dir,'test'), 'w', encoding='utf-8') as f:
+        f.write(test_txt)
+
+    print('Done')
+
+
+def convert_json_to_multiple_gt(dir, json_name='labels.json'):
+    import json
+    with open(os.path.join(dir,json_name)) as json_file:
+        data = json.load(json_file)
+        for key, value in data.items():
+            gt_name=key.replace('.jpg','.txt').replace('.png','.txt')
+            with open(os.path.join(dir, gt_name), 'w', encoding='utf-8') as f:
+                f.write(value)
+
 if __name__ == "__main__":
     root_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset'
     list_dir=['en_00','en_01','InkData_line_processed','meta','vi_00','vi_01','random']
     prepare_train_test_from_multidir(root_dir,list_dir)
+    #prepare_train_from_icdar(icdar_dir, output_dir)
+    root_dir='/data/dataset/cinnamon_data'
+    list_dir=[ '0825_DataSamples','0916_DataSamples','1015_Private Test']
+    prepare_train_test_from_multiple_dir(root_dir,list_dir)
     #prepare_train_from_icdar(icdar_dir, output_dir)

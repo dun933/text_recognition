@@ -28,7 +28,7 @@ class TextRecognition:
         self.converter = utils.strLabelConverter(alphabet, ignore_case=False) 
         self.model.eval()
 
-        self.client = vision.ImageAnnotatorClient()
+        #self.client = vision.ImageAnnotatorClient()
 
     def predict(self, image):
         image = Image.fromarray(image)
@@ -113,24 +113,49 @@ class TextRecognition:
         target = pytesseract.image_to_string(img, lang='eng', config='--psm 8 --oem 3 -c tessedit_char_whitelist= ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
         return target, 1.0
 
+
+def get_list_file_in_folder(dir, ext='png'):
+    included_extensions = ['png', 'jpg', 'JPG', 'jpeg', 'PNG']
+    file_names = [fn for fn in os.listdir(dir)
+                  if any(fn.endswith(ext) for ext in included_extensions)]
+    return file_names
+
 def main():
+    img_dir = '/data/dataset/cinnamon_data/0825_DataSamples'
+    img_path = '/data/dataset/cinnamon_data/0825_DataSamples'
+    alphabet_path = 'data/char_245'
+    model_path='expr/netCRNN_100.pth'
+    #model_path = 'outputs/train_2020-02-20_09-03/AICR_pretrained_30.pth'
+    debug = True
+    width = 512
+    height = 32
+
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--img', required=True, type=str, help='path to img')
-    parser.add_argument('--char', required=True, type=str, help='path to dictionary')
-    parser.add_argument('--weights', required=True, type=str, help='path to pretrained model')
-    parser.add_argument('--gpu', type=int, default=None, help='cuda device')
+    parser.add_argument('--img_dir', default=img_dir, type=str, help='path to img')
+    parser.add_argument('--img', default=img_path, type=str, help='path to img')
+    parser.add_argument('--char', default=alphabet_path, type=str, help='path to dictionary')
+    parser.add_argument('--weights', default=model_path, type=str, help='path to pretrained model')
+    parser.add_argument('--gpu', type=int, default=1, help='cuda device')
 
     args = parser.parse_args()
     print (args)
     
     detector = TextRecognition(weights=args.weights, char=args.char, cuda=args.gpu)
-    image = Image.open(args.img).convert('RGB')
-    images = [np.array(image), np.array(image)]
-    start_time = time.time()
 
-    r  = detector.predicts(images)
-    print('elasped time: ', time.time() - start_time)
-    print(r)
+    list_img=get_list_file_in_folder(args.img_dir)
+    for img in list_img:
+        start_time = time.time()
+        image = Image.open(os.path.join(args.img_dir, img)).convert('RGB')
+        images = [np.array(image), np.array(image)]
+        r  = detector.predicts(images)
+        print(r)
+        print('elasped time: ', time.time() - start_time)
+
+        if debug:
+            img = cv2.imread(os.path.join(args.img_dir, img))
+            cv2.imshow('result', img)
+            cv2.waitKey(0)
 
 if __name__ == '__main__':
     main()
