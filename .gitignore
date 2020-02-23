@@ -1,6 +1,6 @@
-
 workspace/
 demo_results/
+warp-ctc/
 
 #CRAFT-pytorch
 *.pyc
@@ -31,4 +31,3 @@ warp-ctc/
 *.swp
 *.pb
 *.ckpt
-warp-ctc/

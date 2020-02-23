@@ -18,46 +18,54 @@ from tqdm import tqdm
 from torchsummary import summary
 import models.crnn as crnn
 from datetime import datetime
-
+import config
 
 training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
-training_dir='outputs/train_'+training_time
-root_dir='/data/dataset/ocr_dataset'
-pretrained='outputs/train_2020-02-20_18-00/AICR_pretrained_13.pth'
-pretrained=''
-imgW=1024
-imgH=64
-gpu=0
+output_dir = 'outputs/train_' + training_time
+ckpt_prefix=config.ckpt_prefix
+data_dir = config.train_dir
+pretrained = config.pretrained
+imgW = config.imgW
+imgH = config.imgH
+gpu = config.gpu_train
+base_lr = config.base_lr
+max_epoches = config.max_epoches
+alphabet_name = config.alphabet_name
+workers = config.workers_train
+batch_size = config.batch_size
+
 
 class writer:
     def __init__(self, *writers):
         self.writers = writers
+
     def write(self, text):
         for w in self.writers:
             w.write(text)
+
     def flush(self):
         pass
 
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--root', default=root_dir, help='path to root folder')
+parser.add_argument('--root', default=data_dir, help='path to root folder')
 parser.add_argument('--train', default='train', help='path to train set')
 parser.add_argument('--val', default='test', help='path to test set')
-parser.add_argument('--workers', type=int, help='number of data loading workers', default=12)
-parser.add_argument('--batch_size', type=int, default=64, help='input batch size')
+parser.add_argument('--workers', type=int, help='number of data loading workers', default=workers)
+parser.add_argument('--batch_size', type=int, default=batch_size, help='input batch size')
 parser.add_argument('--imgH', type=int, default=imgH, help='the height of the input image to network')
 parser.add_argument('--imgW', type=int, default=imgW, help='the width of the input image to network')
 parser.add_argument('--nh', type=int, default=256, help='size of the lstm hidden state')
-parser.add_argument('--nepoch', type=int, default=100, help='number of epochs to train for')
-parser.add_argument('--cuda', action='store_false', help='enables cuda')
-parser.add_argument('--gpu', type=int, default=gpu, help='list of GPUs to use')
+parser.add_argument('--nepoch', type=int, default=max_epoches, help='number of epochs to train for')
+parser.add_argument('--gpu', default=gpu, help='list of GPUs to use')
 parser.add_argument('--pretrained', default=pretrained, help="path to pretrained model (to continue training)")
-parser.add_argument('--alphabet', type=str, default='char_246', help='path to char in labels')
-parser.add_argument('--expr_dir', default=training_dir, type=str, help='Where to store samples and models')
+parser.add_argument('--alphabet', type=str, default=alphabet_name, help='path to char in labels')
+parser.add_argument('--expr_dir', default=output_dir, type=str, help='Where to store samples and models')
 parser.add_argument('--displayInterval', type=int, default=1, help='Interval to be displayed')
 parser.add_argument('--n_test_disp', type=int, default=10, help='Number of samples to display when test')
 parser.add_argument('--valInterval', type=int, default=1, help='Interval to be displayed')
 parser.add_argument('--saveInterval', type=int, default=1, help='Interval to be displayed')
-parser.add_argument('--lr', type=float, default=0.0005, help='learning rate for Critic, not used by adadealta')
+parser.add_argument('--lr', type=float, default=base_lr, help='learning rate for Critic, not used by adadealta')
 parser.add_argument('--manualSeed', type=int, default=1234, help='reproduce experiemnt')
 opt = parser.parse_args()
 
@@ -70,7 +78,7 @@ f = open(log_file, 'w')
 sys.stdout = writer(sys.stdout, f)
 
 print(opt)
-os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu)
+os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpu
 
 random.seed(opt.manualSeed)
 np.random.seed(opt.manualSeed)
@@ -78,12 +86,11 @@ torch.manual_seed(opt.manualSeed)
 
 cudnn.benchmark = True
 
-if torch.cuda.is_available() and not opt.cuda:
+if torch.cuda.is_available() and opt.gpu == None:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-
 loader = DatasetLoader(opt.root, opt.train, opt.val, opt.imgW, opt.imgH)
-train_loader = loader.train_loader(opt.batch_size, num_workers=opt.workers) 
+train_loader = loader.train_loader(opt.batch_size, num_workers=opt.workers)
 test_loader = loader.test_loader(opt.batch_size, num_workers=opt.workers)
 
 alphabet = open(os.path.join(opt.root, opt.alphabet)).read().rstrip()
@@ -104,7 +111,7 @@ image = torch.FloatTensor(opt.batch_size, num_channel, opt.imgH, opt.imgH)
 text = torch.IntTensor(opt.batch_size * 5)
 length = torch.IntTensor(opt.batch_size)
 
-if opt.cuda:
+if opt.gpu != None:
     crnn.cuda()
     image = image.cuda()
     criterion = criterion.cuda()
@@ -134,15 +141,15 @@ def val(net, data_loader, criterion, max_iter=1000):
         for i in range(max_iter):
             data = val_iter.next()
             cpu_images, cpu_texts = data
-            batch_size = cpu_images.size(0)
+            batch_sz = cpu_images.size(0)
             utils.loadData(image, cpu_images)
             t, l = converter.encode(cpu_texts)
             utils.loadData(text, t)
             utils.loadData(length, l)
 
             preds = net(image)
-            preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
-            cost = criterion(preds, text, preds_size, length)/batch_size
+            preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_sz))
+            cost = criterion(preds, text, preds_size, length) / batch_sz
             cost = cost.detach().item()
             val_loss_avg.add(cost)
 
@@ -158,17 +165,18 @@ def val(net, data_loader, criterion, max_iter=1000):
 
     print('Test loss: %f - cer loss %f' % (val_loss_avg.val(), val_cer_avg.val()))
 
+
 def trainBatch(net, data, criterion, optimizer):
     cpu_images, cpu_texts = data
-    batch_size = cpu_images.size(0)
+    batch_sz = cpu_images.size(0)
     utils.loadData(image, cpu_images)
     t, l = converter.encode(cpu_texts)
     utils.loadData(text, t)
     utils.loadData(length, l)
-    
+
     preds = net(image)
-    preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
-    cost = criterion(preds, text, preds_size, length)/batch_size
+    preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_sz))
+    cost = criterion(preds, text, preds_size, length) / batch_sz
     net.zero_grad()
     cost.backward()
     optimizer.step()
@@ -181,9 +189,9 @@ def trainBatch(net, data, criterion, optimizer):
     return cost, cer_loss, len(cpu_images)
 
 
-for epoch in range(1, opt.nepoch+1):
-    print('\nStart training epoch',epoch)
-    begin=time.time()
+for epoch in range(1, opt.nepoch + 1):
+    print('\nStart training epoch', epoch)
+    begin = time.time()
     t = tqdm(iter(train_loader), total=len(train_loader), desc='Epoch {}'.format(epoch))
     for i, data in enumerate(t):
         for p in crnn.parameters():
@@ -195,7 +203,7 @@ for epoch in range(1, opt.nepoch+1):
         train_cer_avg.add(cer_loss)
 
     print('[%d/%d] Loss: %f - cer loss: %f' %
-            (epoch, opt.nepoch, train_loss_avg.val(), train_cer_avg.val()))
+          (epoch, opt.nepoch, train_loss_avg.val(), train_cer_avg.val()))
     train_loss_avg.reset()
     train_cer_avg.reset()
 
@@ -203,14 +211,14 @@ for epoch in range(1, opt.nepoch+1):
         begin_val = time.time()
         val(crnn, test_loader, criterion)
         end_val = time.time()
-        print('Time for val:',end_val-begin_val,'seconds')
+        print('Time for val:', end_val - begin_val, 'seconds')
 
     # do checkpointing
     if epoch % opt.saveInterval == 0:
         torch.save(
-            crnn.state_dict(), '{}/AICR_pretrained_{}.pth'.format(opt.expr_dir, epoch))
-    end=time.time()
-    print('Time for epoch:',end-begin,'seconds')
+            crnn.state_dict(), ('{}/'+ckpt_prefix+'_{}.pth').format(opt.expr_dir, epoch))
+    end = time.time()
+    print('Time for epoch:', end - begin, 'seconds')
 
 sys.stdout = saved
 f.close()

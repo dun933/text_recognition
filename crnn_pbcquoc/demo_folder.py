@@ -6,9 +6,9 @@ import models.crnn as crnn
 from models.utils import strLabelConverter
 import models.utils as utils
 
-data_dir='/data/dataset/cinnamon_data'
+data_dir='/home/duycuong/PycharmProjects/dataset/cinnamon_data'
 imgW=512
-imgH=32
+imgH=64
 batch_size = 1
 alphabet_path='data/char_246'
 alphabet = open(alphabet_path).read().rstrip()
@@ -17,11 +17,11 @@ nc = 3
 gpu=True
 debug=True
 workers=4
-pretrained_model='outputs/train_2020-02-20_09-03/AICR_pretrained_60.pth'
+pretrained_model='outputs/finetune_cinamon/AICR_pretrained_69.pth'
 image = torch.FloatTensor(batch_size, 3, imgH, imgH)
 text = torch.IntTensor(batch_size * 5)
 length = torch.IntTensor(batch_size)
-model = crnn.CRNN(32, nc, nclass, 256)
+model = crnn.CRNN2(imgH, nc, nclass, 256)
 if gpu:
     model = model.cuda()
     image = image.cuda()
