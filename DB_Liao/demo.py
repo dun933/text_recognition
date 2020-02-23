@@ -9,13 +9,13 @@ from concern.config import Configurable, Config
 import math, time
 
 exp='config/aicr_ic15_resnet18.yaml'
-img_path='/home/duycuong/PycharmProjects/research_py3/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_002.jpg'
+img_path='/home/duycuong/PycharmProjects/research_py3/text_recognition/crnn_pbcquoc/data/trang_new.jpg'
 model_name='model_epoch_115_minibatch_72000'
 ckpt_path='outputs/workspace/DB_Liao/outputs/train_2020-02-12_20-59/model/'+model_name
 polygon=False
 visualize=True
 box_thres=0.315
-img_short_side=1200 #736
+img_short_side=736 #736 1200
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--result_dir', type=str, default='./demo_results/', help='path to save results')
     parser.add_argument('--data', type=str,
                         help='The name of dataloader which will be evaluated on.')
-    parser.add_argument('--image_short_side', type=int, default=736,
+    parser.add_argument('--image_short_side', type=int, default=img_short_side,
                         help='The threshold to replace it in the representers')
     parser.add_argument('--thresh', type=float,
                         help='The threshold to replace it in the representers')

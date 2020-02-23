@@ -118,6 +118,16 @@ def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, tra
 
     print('Done')
 
+def prepare_txt_file(data_dir):
+    list_files = get_list_file_in_folder(data_dir)
+    save_txt=''
+    for file in list_files:
+        save_txt+=os.path.join(data_dir,file)+'\n'
+        with open(os.path.join(data_dir,file.replace('.jpg','.txt').replace('.png','.txt')), 'w', encoding='utf-8') as f:
+            f.write('abc')
+    with open(os.path.join(data_dir+'/..', 'test'), 'w', encoding='utf-8') as f:
+        f.write(save_txt)
+
 
 def convert_json_to_multiple_gt(dir, json_name='labels.json'):
     import json
@@ -133,5 +143,6 @@ if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
     root_dir = '/data/dataset/cinnamon_data'
     list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test']
-    prepare_train_test_from_multiple_dir(root_dir, list_dir)
+    #prepare_train_test_from_multiple_dir(root_dir, list_dir)
+    prepare_txt_file('/home/duycuong/PycharmProjects/research_py3/text_recognition/EAST_argman/outputs/predict_handwriting_model.ckpt-45451/trang_new')
     # prepare_train_from_icdar(icdar_dir, output_dir)

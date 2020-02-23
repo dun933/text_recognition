@@ -8,7 +8,7 @@ import tensorflow as tf
 import locality_aware_nms as nms_locality
 import lanms
 
-test_set='level4'
+test_set='handwriting'
 output_dir='outputs/predict_'+test_set+'_'
 ckpt_path='backup/2nd_train/'
 ckpt_path='outputs'

@@ -27,7 +27,7 @@ batch_size = config.batch_size_test
 alphabet = open(alphabet_name).read().rstrip()
 nclass = len(alphabet) + 1
 nc = 3
-debug=False
+debug=True
 workers = 4
 
 def get_list_file_in_folder(dir, ext='png'):
@@ -50,7 +50,7 @@ def predict(dir, batch_sz, max_iter=1000):
     model.load_state_dict(torch.load(pretrained, map_location='cpu'))
 
     converter = strLabelConverter(alphabet, ignore_case=False)
-    loader = DatasetLoader(dir, 'train', 'test', imgW, imgH)
+    loader = DatasetLoader(dir, imgW, imgH, train_file= 'train', test_file= 'test')
     test_loader = loader.test_loader(batch_sz, num_workers=workers)
     image = Variable(image)
     text = Variable(text)

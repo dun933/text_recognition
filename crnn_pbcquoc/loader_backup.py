@@ -24,7 +24,7 @@ def test_transform(path):
     pass
 
 
-def target_loader(path):
+def label_loader(path):
     label = open(path.replace('/images/', '/annos/')).read().rstrip('\n')
     return label
 
@@ -35,55 +35,78 @@ def default_flist_reader(flist, label=True):
     with open(flist) as rf:
         for line in rf.readlines():
             impath = line.strip()
-            if impath.endswith(img_exts):
+            if impath.endswith(img_exts) and label:
                 imlabel = os.path.splitext(impath)[0] + '.txt'
                 imlist.append((impath, imlabel))
-
+            else:
+                imlist.append(impath)
     return imlist
 
 
 class ImageFileList(data.Dataset):
-    def __init__(self, root, flist, transform, label_transform, flist_reader=default_flist_reader):
+    def __init__(self, root, flist, transform, label_transform, label, flist_reader=default_flist_reader):
         self.root = root
-        self.imlist = flist_reader(flist)
+        self.label = label
+        self.imlist = flist_reader(flist, label)
         self.transform = transform
         self.label_transform = label_transform
 
     def __getitem__(self, index):
-        impath, targetpath = self.imlist[index]
-        imgpath = os.path.join(self.root, impath)
-        targetpath = os.path.join(self.root, targetpath)
 
-        img = self.transform(imgpath)
-        target = self.label_transform(targetpath)
-
-        return img, target
+        if self.label:
+            impath, targetpath = self.imlist[index]
+            imgpath = os.path.join(self.root, impath)
+            targetpath = os.path.join(self.root, targetpath)
+            img = self.transform(imgpath)
+            label = self.label_transform(targetpath)
+            return img, label
+        else:
+            impath = self.imlist[index]
+            imgpath = os.path.join(self.root, impath)
+            img = self.transform(imgpath)
+            return img
 
     def __len__(self):
         return len(self.imlist)
 
 
 class alignCollate(object):
-    def __init__(self, imgW, imgH):
+    def __init__(self, imgW, imgH, label=False):
+        self.label=label
         self.imgH = imgH
         self.imgW = imgW
 
     def __call__(self, batch):
-        images, labels = zip(*batch)
-        images = [resizePadding(image, self.imgW, self.imgH) for image in images]
-        images = torch.cat([t.unsqueeze(0) for t in images], 0)
-        return images, labels
+        if self.label:
+            images, labels = zip(*batch)
+            images = [resizePadding(image, self.imgW, self.imgH) for image in images]
+            images = torch.cat([t.unsqueeze(0) for t in images], 0)
+            return images, labels
+        else:
+            images= zip(*batch)
+            images = [resizePadding(image, self.imgW, self.imgH) for image in images]
+            images = torch.cat([t.unsqueeze(0) for t in images], 0)
+            return images
+
 
 
 class DatasetLoader(object):
-    def __init__(self, root, imgW, imgH, train_file ='', test_file=''):
+    def __init__(self, root, imgW, imgH, label=True, train_file='', test_file=''):
         self.root = root
-        self.train_file = os.path.join(root, train_file)
-        self.test_file = os.path.join(root, test_file)
+        if train_file == '':
+            self.train_file = train_file
+        else:
+            self.train_file = os.path.join(root, train_file)
+
+        if test_file == '':
+            self.test_file = test_file
+        else:
+            self.test_file = os.path.join(root, test_file)
+
         self.imgW = imgW
         self.imgH = imgH
-        self.train_dataset = ImageFileList(root, self.train_file, transform=img_loader, label_transform=target_loader)
-        self.test_dataset = ImageFileList(root, self.test_file, transform=img_loader, label_transform=target_loader)
+        self.train_dataset = ImageFileList(root, self.train_file, transform=img_loader, label_transform=label_loader, label=label)
+        self.test_dataset = ImageFileList(root, self.test_file, transform=img_loader, label_transform=label_loader, label=label)
 
     def train_loader(self, batch_size, num_workers=4, shuffle=True):
         train_loader = torch.utils.data.DataLoader(

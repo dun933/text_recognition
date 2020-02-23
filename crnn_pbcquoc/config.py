@@ -17,11 +17,11 @@ ckpt_prefix='AICR_crnn'
 
 
 #test
-test_dir='/home/duycuong/PycharmProjects/dataset/cinnamon_data'
-pretrained_test='outputs/pretrain_ocr_dataset/AICR_pretrained_30.pth'
+test_dir='data/test_data_vib_handwriting'
+pretrained_test='outputs/AICR_pretrained_48.pth'
 
 #gpu_test = '0'
 gpu_test = None
 workers_test=4
-batch_size_test=64
+batch_size_test=1
 

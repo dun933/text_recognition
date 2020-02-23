@@ -46,7 +46,6 @@ class writer:
     def flush(self):
         pass
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=data_dir, help='path to root folder')
 parser.add_argument('--train', default='train', help='path to train set')
