@@ -85,7 +85,6 @@ class CRNN(nn.Module):
         return output
 
 class CRNN2(nn.Module):
-
     def __init__(self, imgH, nc, nclass, nh, n_rnn=2, leakyRelu=False):
         super(CRNN2, self).__init__()
         assert imgH % 16 == 0, 'imgH has to be a multiple of 16'

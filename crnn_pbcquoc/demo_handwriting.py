@@ -9,7 +9,7 @@ from torch.nn.functional import softmax
 import numpy as np
 import time, os
 import cv2
-from loader import DatasetLoader
+from loader import ImageFileLoader, alignCollate, NumpyListLoader
 import models.utils as utils
 import matplotlib.pyplot as plt
 import config
@@ -17,18 +17,19 @@ import config
 #output_dir = 'outputs/train_' + training_time
 #ckpt_prefix=config.ckpt_prefix
 img_dir = config.test_dir
+test_list=config.test_list
 pretrained = config.pretrained_test
 imgW = config.imgW
 imgH = config.imgH
 gpu = config.gpu_test
-alphabet_name = config.alphabet_name
+alphabet_path = config.alphabet_path
 workers = config.workers_test
 batch_size = config.batch_size_test
-alphabet = open(alphabet_name).read().rstrip()
+label = config.label
+debug = config.debug
+alphabet = open(alphabet_path).read().rstrip()
 nclass = len(alphabet) + 1
 nc = 3
-debug=True
-workers = 4
 
 def get_list_file_in_folder(dir, ext='png'):
     included_extensions = ['png', 'jpg']
@@ -36,13 +37,14 @@ def get_list_file_in_folder(dir, ext='png'):
                   if any(fn.endswith(ext) for ext in included_extensions)]
     return file_names
 
-def predict(dir, batch_sz, max_iter=1000):
+def predict(dir, batch_sz, max_iter = 10000):
     print('Init CRNN classifier')
     image = torch.FloatTensor(batch_sz, 3, imgH, imgH)
     text = torch.IntTensor(batch_sz * 5)
     length = torch.IntTensor(batch_sz)
     model = crnn.CRNN2(imgH, nc, nclass, 256)
     if gpu != None:
+        print ('Use GPU')
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu
         model = model.cuda()
         image = image.cuda()
@@ -50,8 +52,30 @@ def predict(dir, batch_sz, max_iter=1000):
     model.load_state_dict(torch.load(pretrained, map_location='cpu'))
 
     converter = strLabelConverter(alphabet, ignore_case=False)
-    loader = DatasetLoader(dir, imgW, imgH, train_file= 'train', test_file= 'test')
-    test_loader = loader.test_loader(batch_sz, num_workers=workers)
+
+    val_dataset = ImageFileLoader(dir, flist = test_list, label=label)
+    num_files = len(val_dataset)
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=batch_sz,
+        num_workers=workers,
+        shuffle=False,
+        collate_fn=alignCollate(imgW, imgH)
+    )
+
+    new=[]
+    tt=np.zeros((300,200))
+    new.append(tt)
+    new.append(tt)
+    val_dataset = NumpyListLoader(new)
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=batch_sz,
+        num_workers=workers,
+        shuffle=False,
+        collate_fn=alignCollate(imgW, imgH)
+    )
+
     image = Variable(image)
     text = Variable(text)
     length = Variable(length)
@@ -60,9 +84,9 @@ def predict(dir, batch_sz, max_iter=1000):
     # for p in crnn.parameters():
     #     p.requires_grad = False
     model.eval()
-    val_iter = iter(test_loader)
-    max_iter = min(max_iter, len(test_loader))
-    print('Number of samples', max_iter)
+    val_iter = iter(val_loader)
+    max_iter = min(max_iter, len(val_loader))
+    print('Number of samples', num_files)
     begin = time.time()
     with torch.no_grad():
         for i in range(max_iter):
@@ -70,25 +94,22 @@ def predict(dir, batch_sz, max_iter=1000):
             cpu_images, cpu_texts = data
             batch_size = cpu_images.size(0)
             utils.loadData(image, cpu_images)
-
             preds = model(image)
             preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
             _, preds = preds.max(2)
             preds = preds.transpose(1, 0).contiguous().view(-1)
             sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
             raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
-            #print(cpu_texts[0])
-            print('\n    ',raw_pred, '\n =>', sim_pred,'\ngt:', cpu_texts[0])
             if debug:
+                print('\n    ', raw_pred, '\n =>', sim_pred, '\ngt:', cpu_texts[0])
                 cv_img= cpu_images[0].permute(1, 2, 0).numpy()
                 cv_img_bgr = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-                #cv_img_resize=cv2.resize(cv_img_bgr,cv_img_resize,)
                 cv2.imshow('result', cv_img_bgr)
                 cv2.waitKey(0)
     end = time.time()
     processing_time = end - begin
     print('Processing time:',processing_time)
-    print('Speed:', (max_iter*batch_sz) / processing_time, 'fps')
+    print('Speed:', num_files / processing_time, 'fps')
 
 
 if __name__== "__main__":

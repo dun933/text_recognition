@@ -12,13 +12,14 @@ import numpy as np
 from warpctc_pytorch import CTCLoss
 import os, time
 import models.utils as utils
-from loader import DatasetLoader
+from loader import ImageFileLoader, alignCollate
 from multiprocessing import cpu_count
 from tqdm import tqdm
 from torchsummary import summary
 import models.crnn as crnn
 from datetime import datetime
 import config
+from torchvision import transforms
 
 training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
 output_dir = 'outputs/train_' + training_time
@@ -30,7 +31,7 @@ imgH = config.imgH
 gpu = config.gpu_train
 base_lr = config.base_lr
 max_epoches = config.max_epoches
-alphabet_name = config.alphabet_name
+alphabet_path = config.alphabet_path
 workers = config.workers_train
 batch_size = config.batch_size
 
@@ -48,8 +49,8 @@ class writer:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=data_dir, help='path to root folder')
-parser.add_argument('--train', default='train', help='path to train set')
-parser.add_argument('--val', default='test', help='path to test set')
+parser.add_argument('--train', default='train.txt', help='path to train set')
+parser.add_argument('--val', default='val.txt', help='path to val set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=workers)
 parser.add_argument('--batch_size', type=int, default=batch_size, help='input batch size')
 parser.add_argument('--imgH', type=int, default=imgH, help='the height of the input image to network')
@@ -58,7 +59,7 @@ parser.add_argument('--nh', type=int, default=256, help='size of the lstm hidden
 parser.add_argument('--nepoch', type=int, default=max_epoches, help='number of epochs to train for')
 parser.add_argument('--gpu', default=gpu, help='list of GPUs to use')
 parser.add_argument('--pretrained', default=pretrained, help="path to pretrained model (to continue training)")
-parser.add_argument('--alphabet', type=str, default=alphabet_name, help='path to char in labels')
+parser.add_argument('--alphabet', type=str, default=alphabet_path, help='path to char in labels')
 parser.add_argument('--expr_dir', default=output_dir, type=str, help='Where to store samples and models')
 parser.add_argument('--displayInterval', type=int, default=1, help='Interval to be displayed')
 parser.add_argument('--n_test_disp', type=int, default=10, help='Number of samples to display when test')
@@ -88,11 +89,29 @@ cudnn.benchmark = True
 if torch.cuda.is_available() and opt.gpu == None:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-loader = DatasetLoader(opt.root, opt.train, opt.val, opt.imgW, opt.imgH)
-train_loader = loader.train_loader(opt.batch_size, num_workers=opt.workers)
-test_loader = loader.test_loader(opt.batch_size, num_workers=opt.workers)
+#augmentation
+transform_train = transforms.Compose([transforms.RandomRotation(5)])
+transform_train = None
+train_dataset = ImageFileLoader(opt.root, opt.train, transform=transform_train)
 
-alphabet = open(os.path.join(opt.root, opt.alphabet)).read().rstrip()
+train_loader = torch.utils.data.DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            num_workers=opt.workers,
+            shuffle=True,
+            collate_fn=alignCollate(opt.imgW, opt.imgH)
+        )
+
+val_dataset = ImageFileLoader(opt.root, opt.val)
+val_loader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size=batch_size,
+            num_workers=opt.workers,
+            shuffle=False,
+            collate_fn=alignCollate(opt.imgW, opt.imgH)
+        )
+
+alphabet = open(opt.alphabet).read().rstrip()
 nclass = len(alphabet) + 1
 num_channel = 3
 
@@ -208,7 +227,7 @@ for epoch in range(1, opt.nepoch + 1):
 
     if epoch % opt.valInterval == 0:
         begin_val = time.time()
-        val(crnn, test_loader, criterion)
+        val(crnn, val_loader, criterion)
         end_val = time.time()
         print('Time for val:', end_val - begin_val, 'seconds')
 

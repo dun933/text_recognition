@@ -422,6 +422,11 @@ def transform_image_from_dir(src_dir=None):
     pts1 = np.float32([[118.5, 74], [837, 511.5], [138.5, 1195.5]]) #190715070307992_8477719722_pod_gray
     pts1 = np.float32([[142.5, 69.5], [827, 510.5], [155.5, 1192.5]]) #190715070309284_8478218758_pod_gray
     pts2 = np.float32([[126.5, 73.5], [844, 514], [139, 1191.5]])
+
+    pts1 = np.float32([[267.5, 332.5], [2147, 2424.5], [248.5, 3397.5]]) #0001_cuongnt
+    pts2 = np.float32([[270.5, 325.5], [2133, 2431], [227, 3390.5]]) #0001_tungnt
+    pts1 = np.float32([[270.5, 315.5], [2130.5, 2422], [224.5, 3380.5]]) #ori
+
     M = cv2.getAffineTransform(pts1, pts2)
     src_file='C:/Users/nd.cuong1/Downloads/Template_Matching-master/data/test_tm/sample/190715070309284_8478218758_pod_gray.jpg'
     img = cv2.imread(src_file, 0)
@@ -432,10 +437,10 @@ def transform_image_from_dir(src_dir=None):
     result_inv = background_subtract(crop_img)
     cv2.imwrite(src_file.replace('.jpg','_crop_ori_subtract_inv_anchor.jpg'),result_inv)
 
-def crop_image(input_img, bbox=[32,316,962,114]):
+def crop_image(input_img, bbox=[905,1010,1300,138]):
     print('crop')
-    offset_x = -1
-    offset_y = -1
+    offset_x = 0
+    offset_y = 0
     crop_img = input_img[bbox[1]+offset_y:bbox[1] + bbox[3]+offset_y, bbox[0]+offset_x:bbox[0] + bbox[2]+offset_x]
     return crop_img
 
