@@ -11,6 +11,8 @@ detector_box_thres=0.5
 classifier_ckpt_path=''
 classifier_width=256
 classifier_height=32
+debug=True
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 
 class Detector_DB:
@@ -120,61 +122,81 @@ class Detector_DB:
 
             return boxes
 
-from crnn_pbcquoc.models.utils import strLabelConverter, resizePadding
-from PIL import Image
+from crnn_pbcquoc.models.utils import strLabelConverter
 from torch.autograd import Variable
 import crnn_pbcquoc.models.crnn as crnn
-from torch.nn.functional import softmax
-
-debug=True
+import crnn_pbcquoc.models.utils as utils
+from crnn_pbcquoc.loader import NumpyListLoader, alignCollate
 
 class Classifier_CRNN:
-    def __init__(self, ckpt_path='', num_channel = 3, alphabet_path='crnn_pbcquoc/data/char'):
-        self.imgW = classifier_width
-        self.imgH = classifier_height
+    def __init__(self, ckpt_path='', gpu=0, batch_sz=16, workers=4, num_channel = 3, imgW=256, imgH=64, alphabet_path='crnn_pbcquoc/data/char_246'):
+        self.imgW = imgW
+        self.imgH = imgH
+        self.batch_sz=batch_sz
         alphabet = open(alphabet_path).read().rstrip()
         nclass = len(alphabet) + 1
-        self.converter = strLabelConverter(alphabet, ignore_case=False)
-        self.model = crnn.CRNN(self.imgH, num_channel, nclass, self.imgW)
-        if torch.cuda.is_available():
+        image = torch.FloatTensor(batch_sz, 3, imgH, imgH)deform_conv_cuda
+        text = torch.IntTensor(batch_sz * 5)
+        length = torch.IntTensor(batch_sz)
+        self.model = crnn.CRNN2(imgH, num_channel, nclass, 256)
+        if gpu != None and torch.cuda.is_available():
+            print('Use GPU')
+            os.environ['CUDA_VISIBLE_DEVICES'] = gpu
             self.model = self.model.cuda()
+            image = image.cuda()
         print('loading pretrained model from %s' % ckpt_path)
         self.model.load_state_dict(torch.load(ckpt_path, map_location='cpu'))
-
-
-    def inference(self, img_path, visualize=False):
-        image = Image.open(img_path).convert('RGB')
-        image = resizePadding(image, self.imgW, self.imgH)
-
-        if torch.cuda.is_available():
-            image = image.cuda()
-
-        image = image.view(1, *image.size())
-        image = Variable(image)
-
+        self.converter = strLabelConverter(alphabet, ignore_case=False)
+        self.image = Variable(image)
+        self.text = Variable(text)
+        self.length = Variable(length)
+        self.workers=workers
         self.model.eval()
-        preds = self.model(image)
 
-        values, prob = softmax(preds, dim=-1).max(2)
-        preds_idx = (prob > 0).nonzero()
-        sent_prob = values[preds_idx[:, 0], preds_idx[:, 1]].mean().item()
+    def inference(self, img_list, visualize=False):
+        val_dataset = NumpyListLoader(img_list)
+        num_files = len(val_dataset)
+        val_loader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size=self.batch_sz,
+            num_workers=self.workers,
+            shuffle=False,
+            collate_fn=alignCollate(self.imgW, self.imgH)
+        )
 
-        _, preds = preds.max(2)
-        preds = preds.transpose(1, 0).contiguous().view(-1)
-        preds_size = Variable(torch.IntTensor([preds.size(0)]))
-        raw_pred = self.converter.decode(preds.data, preds_size.data, raw=True)
-        sim_pred = self.converter.decode(preds.data, preds_size.data, raw=False)
-        print(raw_pred, '=>', sim_pred)
-        if debug:
-            img = cv2.imread(img_path)
-            cv2.imshow('result', img)
-            cv2.waitKey(0)
+        val_iter = iter(val_loader)
+        max_iter = len(val_loader)
+        print('Number of samples', num_files)
+        begin = time.time()
+        with torch.no_grad():
+            for i in range(max_iter):
+                data = val_iter.next()
+                cpu_images, cpu_texts = data
+                batch_size = cpu_images.size(0)
+                utils.loadData(self.image, cpu_images)
+                preds = self.model(self.image)
+                preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
+                _, preds = preds.max(2)
+                preds = preds.transpose(1, 0).contiguous().view(-1)
+                sim_pred = self.converter.decode(preds.data, preds_size.data, raw=False)
+                raw_pred = self.converter.decode(preds.data, preds_size.data, raw=True)
+                if debug:
+                    print('\n    ', raw_pred, '\n =>', sim_pred, '\ngt:', cpu_texts[0])
+                    cv_img = cpu_images[0].permute(1, 2, 0).numpy()
+                    cv_img_bgr = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+                    cv2.imshow('result', cv_img_bgr)
+                    cv2.waitKey(0)
+        end = time.time()
+        processing_time = end - begin
+        print('Processing time:', processing_time)
+        print('Speed:', num_files / processing_time, 'fps')
+
 
 import argparse
 exp='DB_Liao/config/aicr_ic15_resnet18.yaml'
-img_path='/home/duycuong/PycharmProjects/research_py3/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_002.jpg'
+img_path='/data/Eval/imgs/SCAN_20191128_145142994_002.jpg'
 model_name='model_epoch_115_minibatch_72000'
-ckpt_path='DB_Liao/outputs/workspace/DB_Liao/outputs/train_2020-02-12_20-59/model/'+model_name
+ckpt_path='DB_Liao/outputs/'+model_name
 polygon=False
 visualize=False
 box_thres=0.315
@@ -219,6 +241,9 @@ def main():
 
     #initialize
     detector= Detector_DB(experiment, experiment_args, cmd=args)
+    classifier = Classifier_CRNN()
+
+
     boxes_list = detector.inference(args['image_path'], args['visualize'])
     new_boxes_list = convert_boxes(boxes_list)
 

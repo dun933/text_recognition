@@ -55,16 +55,13 @@ class CRNN(nn.Module):
         cnn.add_module('pooling{0}'.format(1), nn.MaxPool2d(2, 2))  # 128x8x32
         convRelu(2)
         convRelu(3)
-        cnn.add_module('pooling{0}'.format(2),
-                       nn.MaxPool2d((2, 2), (2, 2), (0, 0)))  # 256x4x16
+        cnn.add_module('pooling{0}'.format(2), nn.MaxPool2d((2, 2), (2, 2), (0, 0)))  # 256x4x16
         convRelu(4)
         convRelu(5)
-        cnn.add_module('pooling{0}'.format(3),
-                       nn.MaxPool2d((2, 2), (2, 1), (0, 0)))  # 512x2x16
+        cnn.add_module('pooling{0}'.format(3),  nn.MaxPool2d((2, 2), (2, 1), (0, 0)))  # 512x2x16
         convRelu(6)  # 512x1x16
 
         self.cnn = cnn
-
         self.rnn = nn.Sequential(
             BidirectionalLSTM(512, nh, nh, 0),
             BidirectionalLSTM(nh, nh, nclass, 0)

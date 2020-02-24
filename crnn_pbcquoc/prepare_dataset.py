@@ -87,7 +87,7 @@ def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, tra
     print('root dir:', root_dir)
     for dir in list_dir:
         list_files = get_list_file_in_folder(os.path.join(root_dir, dir))
-        convert_json_to_multiple_gt(os.path.join(root_dir, dir))
+        #convert_json_to_multiple_gt(os.path.join(root_dir, dir))
         print('Dir ', dir, 'has', len(list_files), 'files')
         for idx, file in enumerate(list_files):
             list_dir_txt.append(os.path.join(dir, file))
@@ -107,13 +107,13 @@ def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, tra
     train_txt = ''
     for train_file in train_list:
         train_txt += train_file + '\n'
-    with open(os.path.join(root_dir, 'train'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(root_dir, 'train.txt'), 'w', encoding='utf-8') as f:
         f.write(train_txt)
 
     test_txt = ''
     for test_file in test_list:
         test_txt += test_file + '\n'
-    with open(os.path.join(root_dir, 'test'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(root_dir, 'val.txt'), 'w', encoding='utf-8') as f:
         f.write(test_txt)
 
     print('Done')
@@ -128,7 +128,6 @@ def prepare_txt_file(data_dir):
     with open(os.path.join(data_dir+'/..', 'test'), 'w', encoding='utf-8') as f:
         f.write(save_txt)
 
-
 def convert_json_to_multiple_gt(dir, json_name='labels.json'):
     import json
     with open(os.path.join(dir, json_name)) as json_file:
@@ -138,11 +137,10 @@ def convert_json_to_multiple_gt(dir, json_name='labels.json'):
             with open(os.path.join(dir, gt_name), 'w', encoding='utf-8') as f:
                 f.write(value)
 
-
 if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
     root_dir = '/data/dataset/cinnamon_data'
-    list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test']
-    #prepare_train_test_from_multiple_dir(root_dir, list_dir)
-    prepare_txt_file('/home/duycuong/PycharmProjects/research_py3/text_recognition/EAST_argman/outputs/predict_handwriting_model.ckpt-45451/trang_new')
+    list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test','0825_DataSamples_dots', '0916_DataSamples_dots', '1015_Private Test_dots','0825_DataSamples_linedots', '0916_DataSamples_linedots', '1015_Private Test_linedots','0825_DataSamples_lines', '0916_DataSamples_lines', '1015_Private Test_lines']
+    prepare_train_test_from_multiple_dir(root_dir, list_dir)
+    #prepare_txt_file('/home/duycuong/PycharmProjects/research_py3/text_recognition/EAST_argman/outputs/predict_handwriting_model.ckpt-45451/trang_new')
     # prepare_train_from_icdar(icdar_dir, output_dir)

@@ -1,5 +1,5 @@
 import:
-    - '/home/duycuong/PycharmProjects/research_py3/text_recognition/DB_Liao/config/base_ic15.yaml'
+    - '/home/aicr/cuongnd/text_recognition/DB_Liao/config/base_ic15.yaml'
 package: []
 define:
   - name: 'Experiment'

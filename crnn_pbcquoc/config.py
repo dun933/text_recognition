@@ -5,15 +5,15 @@ alphabet_path = 'data/char_246'
 
 
 #train
-train_dir='/data/dataset/ocr_dataset'
-#pretrained='outputs/train_2020-02-20_18-00/AICR_pretrained_13.pth'
+train_dir='/data/dataset/cinnamon_data'
+pretrained='outputs/train_2020-02-21_13-44_train_ocr_dataset/AICR_pretrained_30.pth'
 pretrained=''
 gpu_train = '0'  #'0,1' or None
 base_lr = 0.0005
 max_epoches = 100
-workers_train = 8
+workers_train = 4
 batch_size = 64
-ckpt_prefix = 'AICR_crnn'
+ckpt_prefix = 'AICR_pretrained'
 
 #test
 test_dir='/data/dataset/cinnamon_data/0916_DataSamples'

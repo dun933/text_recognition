@@ -3,13 +3,7 @@ import torch
 import os
 import torch.utils.data as data
 from PIL import Image
-import numpy as np
-import argparse
-import time
-from multiprocessing import cpu_count
-import uuid
 from models.utils import resizePadding
-from torchvision import transforms
 
 def default_flist_reader(root, flist):
     imlist = []

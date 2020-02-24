@@ -31,12 +31,6 @@ alphabet = open(alphabet_path).read().rstrip()
 nclass = len(alphabet) + 1
 nc = 3
 
-def get_list_file_in_folder(dir, ext='png'):
-    included_extensions = ['png', 'jpg']
-    file_names = [fn for fn in os.listdir(dir)
-                  if any(fn.endswith(ext) for ext in included_extensions)]
-    return file_names
-
 def predict(dir, batch_sz, max_iter = 10000):
     print('Init CRNN classifier')
     image = torch.FloatTensor(batch_sz, 3, imgH, imgH)
@@ -52,22 +46,8 @@ def predict(dir, batch_sz, max_iter = 10000):
     model.load_state_dict(torch.load(pretrained, map_location='cpu'))
 
     converter = strLabelConverter(alphabet, ignore_case=False)
-
     val_dataset = ImageFileLoader(dir, flist = test_list, label=label)
     num_files = len(val_dataset)
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=batch_sz,
-        num_workers=workers,
-        shuffle=False,
-        collate_fn=alignCollate(imgW, imgH)
-    )
-
-    new=[]
-    tt=np.zeros((300,200))
-    new.append(tt)
-    new.append(tt)
-    val_dataset = NumpyListLoader(new)
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=batch_sz,
@@ -80,10 +60,10 @@ def predict(dir, batch_sz, max_iter = 10000):
     text = Variable(text)
     length = Variable(length)
 
-    print('Start predict')
     # for p in crnn.parameters():
     #     p.requires_grad = False
     model.eval()
+    print('Start predict')
     val_iter = iter(val_loader)
     max_iter = min(max_iter, len(val_loader))
     print('Number of samples', num_files)

@@ -85,7 +85,6 @@ np.random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
 cudnn.benchmark = True
-
 if torch.cuda.is_available() and opt.gpu == None:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
