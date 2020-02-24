@@ -1,0 +1,4 @@
+python-Levenshtein
+google-cloud-vision
+pytesseract
+

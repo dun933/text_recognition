@@ -1,5 +1,5 @@
 import:
-    - '/home/aicr/cuongnd/text_recognition/DB_Liao/config/base_ic15.yaml'
+    - 'DB_Liao/config/base_ic15.yaml'
 package: []
 define:
   - name: 'Experiment'

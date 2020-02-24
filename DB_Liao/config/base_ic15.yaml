@@ -1,14 +1,14 @@
 import:
-    - '/home/aicr/cuongnd/text_recognition/DB_Liao/experiments/base.yaml'
+    - 'DB_Liao/experiments/base.yaml'
 package:
     - 'decoders.seg_detector_loss'
 define:
   - name: train_data
     class: ImageDataset
     data_dir:
-        - '/home/aicr/cuongnd/text_recognition/data/Eval_corpus'
+        - 'DB_Liao/datasets/Eval_corpus'
     data_list:
-        - '/home/aicr/cuongnd/text_recognition/data/Eval_corpus/train_list.txt'
+        - 'DB_Liao/datasets/Eval_corpus/train_list.txt'
     processes:
         - class: AugmentDetectionData
           augmenter_args:
@@ -28,9 +28,9 @@ define:
   - name: validate_data
     class: ImageDataset
     data_dir:
-        - '/home/aicr/cuongnd/text_recognition/data/Eval_corpus/'
+        - 'DB_Liao/datasets/Eval_corpus/'
     data_list:
-        - '/home/aicr/cuongnd/text_recognition/data/Eval_corpus/test_list.txt'
+        - 'DB_Liao/datasets/Eval_corpus/test_list.txt'
     processes:
         - class: AugmentDetectionData
           augmenter_args:
