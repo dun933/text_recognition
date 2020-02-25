@@ -4,24 +4,25 @@ import os
 import torch
 import cv2
 import numpy as np
+from experiment import Structure, Experiment
 from concern.config import Configurable, Config
 import math, time
 
-exp='config/aicr_ic15_resnet18.yaml'
-img_path='../data/handwriting/trang.jpg'
-img_path= '../data/Eval/imgs/SCAN_20191128_145142994_002.jpg'
-detector_model = 'model_epoch_115_minibatch_72000'
-ckpt_path='outputs/'+detector_model
-polygon=False
-visualize=True
-img_short_side=736 #736 1200
+exp = 'config/aicr_ic15_resnet18.yaml'
+img_path = '/home/duycuong/PycharmProjects/research_py3/text_recognition/crnn_pbcquoc/data/trang_new.jpg'
+model_name = 'model_epoch_115_minibatch_72000'
+ckpt_path = 'outputs/workspace/DB_Liao/outputs/train_2020-02-12_20-59/model/' + model_name
+polygon = False
+visualize = True
+box_thres = 0.315
+img_short_side = 736  # 736 1200
 
-detector_box_thres = 0.5
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
     parser.add_argument('--exp', type=str, default=exp)
     parser.add_argument('--resume', type=str, help='Resume from checkpoint', default=ckpt_path)
+    parser.add_argument('--image_path', type=str, help='image path', default=img_path)
     parser.add_argument('--result_dir', type=str, default='./demo_results/', help='path to save results')
     parser.add_argument('--data', type=str,
                         help='The name of dataloader which will be evaluated on.')
@@ -29,10 +30,11 @@ def main():
                         help='The threshold to replace it in the representers')
     parser.add_argument('--thresh', type=float,
                         help='The threshold to replace it in the representers')
-    parser.add_argument('--box_thresh', type=float, default=detector_box_thres,
+    parser.add_argument('--box_thresh', type=float, default=box_thres,
                         help='The threshold to replace it in the representers')
-    parser.add_argument('--resize', action='store_true', help='resize')
-    parser.add_argument('--visualize', default=visualize, help='visualize maps in tensorboard')
+    parser.add_argument('--visualize', help='visualize maps in tensorboard', default=visualize)
+    parser.add_argument('--resize', action='store_true',
+                        help='resize')
     parser.add_argument('--polygon', help='output polygons if true', default=polygon)
     parser.add_argument('--eager', '--eager_show', action='store_true', dest='eager_show',
                         help='Show iamges eagerly')
@@ -46,38 +48,40 @@ def main():
     experiment_args.update(cmd=args)
     experiment = Configurable.construct_class_from_config(experiment_args)
 
-    Demo(experiment, experiment_args, cmd=args).inference(img_path, args['visualize'])
-
+    Demo(experiment, experiment_args, cmd=args).inference(args['image_path'], args['visualize'])
 
 
 class Demo:
-    def __init__(self, experiment, args, gpu='0', cmd=dict()):
+    def __init__(self, experiment, args, cmd=dict()):
         self.RGB_MEAN = np.array([122.67891434, 116.66876762, 104.00698793])
         self.experiment = experiment
-        self.gpu = gpu
         experiment.load('evaluation', **args)
         self.args = cmd
+        model_saver = experiment.train.model_saver
         self.structure = experiment.structure
-        self.init_torch_tensor()
-        self.init_model(self.args['resume'])
-        self.model.eval()
+        self.model_path = self.args['resume']
 
     def init_torch_tensor(self):
-        if torch.cuda.is_available() and self.gpu != None:
+        # Use gpu or not
+        torch.set_default_tensor_type('torch.FloatTensor')
+        if torch.cuda.is_available():
             self.device = torch.device('cuda')
             torch.set_default_tensor_type('torch.cuda.FloatTensor')
         else:
             self.device = torch.device('cpu')
-            torch.set_default_tensor_type('torch.FloatTensor')
 
-    def init_model(self, path):
-        self.model = self.structure.builder.build(self.device)
+    def init_model(self):
+        model = self.structure.builder.build(self.device)
+        return model
+
+    def resume(self, model, path):
         if not os.path.exists(path):
             print("Checkpoint not found: " + path)
             return
         print("Resuming from " + path)
-        states = torch.load(path, map_location=self.device)
-        self.model.load_state_dict(states, strict=False)
+        states = torch.load(
+            path, map_location=self.device)
+        model.load_state_dict(states, strict=False)
         print("Resumed from " + path)
 
     def resize_image(self, img):
@@ -127,24 +131,32 @@ class Demo:
                         res.write(result + ',' + str(score) + "\n")
 
     def inference(self, image_path, visualize=False):
+        self.init_torch_tensor()
+        model = self.init_model()
+        self.resume(model, self.model_path)
+        all_matircs = {}
+        model.eval()
         batch = dict()
         batch['filename'] = [image_path]
         img, original_shape = self.load_image(image_path)
         batch['shape'] = [original_shape]
         with torch.no_grad():
             batch['image'] = img
-            pred = self.model.forward(batch, training=False)
+            begin = time.time()
+            pred = model.forward(batch, training=False)
             output = self.structure.representer.represent(batch, pred, is_output_polygon=self.args['polygon'])
             if not os.path.isdir(self.args['result_dir']):
                 os.mkdir(self.args['result_dir'])
             self.format_output(batch, output)
-            boxes, _ = output
-            boxes = boxes[0]
+
+            end = time.time()
+            print('ellapse time:', 1000 * (end - begin), 'miliseconds')
             if visualize and self.structure.visualizer:
                 vis_image = self.structure.visualizer.demo_visualize(image_path, output)
                 cv2.imwrite(os.path.join(self.args['result_dir'],
-                                         image_path.split('/')[-1].split('.')[0] + '_ ' + detector_model + '_ ' + str
-                                         (detector_box_thres) + '.jpg'), vis_image)
-            return boxes
+                                         image_path.split('/')[-1].split('.')[0] + '_' + model_name + '_' + str(
+                                             box_thres) + '.jpg'), vis_image)
+
+
 if __name__ == '__main__':
     main()

@@ -1,6 +1,7 @@
 
 class bbox:
-    def __init__(self, left, top, right, bottom, value=''):
+    def __init__(self, left, top, right, bottom, key='', value=''):
+        self.key = key
         self.value = value
         self.xmin = left
         self.ymin = top
@@ -23,6 +24,9 @@ class bbox:
         self.xmin=self.xmin-x
         self.ymin=self.ymin-y
         return self.line_str
+
+    def asign_value(self, value):
+        self.value=value
 
     def to_line_str(self):
         self.line_str=self.value+" "+str(int(self.xmin))+" "+str(int(self.ymin))+" "+str(int(self.width))+" "+str(int(self.height))

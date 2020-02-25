@@ -5,15 +5,125 @@ from DB_Liao.concern.config import Configurable, Config
 from BoundingBox import bbox
 import argparse
 
-detector_model = ''
-detector_box_thres = 0.5
+#classifier
+from crnn_pbcquoc.models.utils import strLabelConverter
+from torch.autograd import Variable
+import crnn_pbcquoc.models.crnn as crnn
+import crnn_pbcquoc.models.utils as utils
+from crnn_pbcquoc.loader import NumpyListLoader, alignCollate
+from matplotlib import pyplot as plt
+import matplotlib.patches as patches
+os.environ["PYTHONIOENCODING"] = "utf-8"
+
+img_path = 'data/handwriting/IMG_3788.JPG'
+img_path = 'data/Cello/imgs/190715070317353_8479413342_pod.png'
+output_dir='outputs'
+#detector
+detector_model = 'model_epoch_115_minibatch_72000'
+detector_box_thres = 0.315
+config_file = 'config/aicr_ic15_resnet18.yaml'
+ckpt_path = 'DB_Liao/outputs/' + detector_model
+polygon = False
+visualize = True
+img_short_side = 736  # 736
 
 # classifier
-classifier_ckpt_path = ''
-classifier_width = 256
+classifier_ckpt_path = 'crnn_pbcquoc/outputs/train_2020-02-24_20-41_finetune_cinamon_input64_augmented/AICR_pretrained_48.pth'
+classifier_ckpt_path = 'models/AICR_CRNN_printing_11.pth'
+alphabet_path='config/char_229'
+classifier_width = 512
 classifier_height = 32
+classifier_batch_sz = 16
 debug = False
+if debug:
+    classifier_batch_sz = 1
 
+
+def main():
+    parser = argparse.ArgumentParser(description='Text Recognition Training')
+    parser.add_argument('--exp', type=str, default=config_file)
+    parser.add_argument('--resume', type=str, help='Resume from checkpoint', default=ckpt_path)
+    parser.add_argument('--result_dir', type=str, default = output_dir, help='path to save results')
+    parser.add_argument('--data', type=str,
+                        help='The name of dataloader which will be evaluated on.')
+    parser.add_argument('--image_short_side', type=int, default=img_short_side,
+                        help='The threshold to replace it in the representers')
+    parser.add_argument('--thresh', type=float,
+                        help='The threshold to replace it in the representers')
+    parser.add_argument('--box_thresh', type=float, default=detector_box_thres,
+                        help='The threshold to replace it in the representers')
+    parser.add_argument('--resize', action='store_true', help='resize')
+    parser.add_argument('--visualize', default=visualize, help='visualize maps in tensorboard')
+    parser.add_argument('--polygon', help='output polygons if true', default=polygon)
+    parser.add_argument('--eager', '--eager_show', action='store_true', dest='eager_show',
+                        help='Show iamges eagerly')
+
+    args = parser.parse_args()
+    args = vars(args)
+    args = {k: v for k, v in args.items() if v is not None}
+
+    # initialize
+    begin_init = time.time()
+    detector, classifier = init_models(args, gpu='0')
+    test_img = cv2.imread(img_path)
+    end_init = time.time()
+    print('Init models time:', end_init - begin_init, 'seconds')
+
+    boxes_list = detector.inference(img_path, visualize)
+    end_detector = time.time()
+    print('Detector time:', end_detector - end_init, 'seconds')
+
+    boxes_data, boxes_info = get_boxes_data(test_img, boxes_list)
+    end_get_boxes_data = time.time()
+    print('Get boxes time:', end_get_boxes_data - end_detector, 'seconds')
+
+    values = classifier.inference(boxes_data)
+    end_classifier = time.time()
+    print('Classifier time:', end_classifier - end_get_boxes_data, 'seconds')
+    print('\nTotal predict time:', end_classifier - end_init, 'seconds')
+
+    for idx, box in enumerate(boxes_info):
+        box.asign_value(values[idx])
+    visualize_results(test_img,boxes_info)
+    end_visualize = time.time()
+    print('Visualize time:', end_visualize - end_classifier, 'seconds')
+    print('Done')
+
+
+def visualize_results(img, boxes_info, inch=40):
+    fig, ax = plt.subplots(1)
+    fig.set_size_inches(inch, inch)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    plt.imshow(img, cmap='Greys_r')
+
+    for box in boxes_info:
+        plt.text(box.xmin - 2, box.ymin - 4, box.value, fontsize=max(int(box.height), 12), fontdict={"color": 'r'})
+
+        ax.add_patch(patches.Rectangle((box.xmin, box.ymin), box.width, box.height,
+                                       linewidth=2, edgecolor='green', facecolor='none'))
+
+    # plt.show()
+
+    save_img_path = os.path.join(output_dir, img_path.split('/')[-1].split('.')[0] + '_visualized.jpg')
+    print('Save image to', save_img_path)
+    fig.savefig(save_img_path, bbox_inches='tight')
+
+
+
+def init_models(args, gpu='0'):
+    if gpu != None:
+        print('Use GPU', gpu)
+        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
+    else:
+        print('Use CPU')
+    conf = Config()
+    experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
+    experiment_args.update(cmd=args)
+    experiment = Configurable.construct_class_from_config(experiment_args)
+    detector = Detector_DB(experiment, experiment_args, gpu=gpu, cmd=args)
+    classifier = Classifier_CRNN(ckpt_path=classifier_ckpt_path, batch_sz=classifier_batch_sz,
+                                 imgW=classifier_width, imgH=classifier_height, gpu=gpu, alphabet_path=alphabet_path)
+    return detector, classifier
 
 class Detector_DB:
     def __init__(self, experiment, args, gpu='0', cmd=dict()):
@@ -38,12 +148,11 @@ class Detector_DB:
     def init_model(self, path):
         self.model = self.structure.builder.build(self.device)
         if not os.path.exists(path):
-            print("Checkpoint not found: " + path)
+            print("Detector. Checkpoint not found: " + path)
             return
-        print("Resuming from " + path)
         states = torch.load(path, map_location=self.device)
         self.model.load_state_dict(states, strict=False)
-        print("Resumed from " + path)
+        print("Detector. Resumed from " + path)
 
     def resize_image(self, img):
         height, width, _ = img.shape
@@ -68,7 +177,6 @@ class Detector_DB:
     def format_output(self, batch, output):
         batch_boxes, batch_scores = output
         for index in range(batch['image'].size(0)):
-            original_shape = batch['shape'][index]
             filename = batch['filename'][index]
             result_file_name = 'res_' + filename.split('/')[-1].split('.')[0] + '.txt'
             result_file_path = os.path.join(self.args['result_dir'], result_file_name)
@@ -112,17 +220,9 @@ class Detector_DB:
                                          (detector_box_thres) + '.jpg'), vis_image)
             return boxes
 
-
-from crnn_pbcquoc.models.utils import strLabelConverter
-from torch.autograd import Variable
-import crnn_pbcquoc.models.crnn as crnn
-import crnn_pbcquoc.models.utils as utils
-from crnn_pbcquoc.loader import NumpyListLoader, alignCollate
-
-
 class Classifier_CRNN:
-    def __init__(self, ckpt_path='', gpu='0', batch_sz=16, workers=4, num_channel=3, imgW=128, imgH=64,
-                 alphabet_path='crnn_pbcquoc/data/char_246'):
+    def __init__(self, ckpt_path='', gpu='0', batch_sz=16, workers=4, num_channel=3, imgW=256, imgH=64,
+                 alphabet_path='config/char_246'):
         self.imgW = imgW
         self.imgH = imgH
         self.batch_sz = batch_sz
@@ -131,12 +231,11 @@ class Classifier_CRNN:
         self.image = torch.FloatTensor(batch_sz, 3, imgH, imgH)
         self.text = torch.IntTensor(batch_sz * 5)
         self.length = torch.IntTensor(batch_sz)
-        self.model = crnn.CRNN2(imgH, num_channel, nclass, 256)
+        self.model = crnn.CRNN(imgH, num_channel, nclass, 256)
         if gpu != None and torch.cuda.is_available():
-            print('Classifier use GPU', gpu)
             self.model = self.model.cuda()
             self.image = self.image.cuda()
-        print('loading pretrained model from %s' % ckpt_path)
+        print('Classifier. Resumed from %s' % ckpt_path)
         self.model.load_state_dict(torch.load(ckpt_path, map_location='cpu'))
         self.converter = strLabelConverter(alphabet, ignore_case=False)
         self.image = Variable(self.image)
@@ -148,6 +247,8 @@ class Classifier_CRNN:
     def inference(self, img_list, visualize=False):
         val_dataset = NumpyListLoader(img_list)
         num_files = len(val_dataset)
+        print('Classifier. Begin classify',num_files,'boxes')
+        values=[]
         val_loader = torch.utils.data.DataLoader(
             val_dataset,
             batch_size=self.batch_sz,
@@ -172,8 +273,10 @@ class Classifier_CRNN:
                 preds = preds.transpose(1, 0).contiguous().view(-1)
                 sim_pred = self.converter.decode(preds.data, preds_size.data, raw=False)
                 raw_pred = self.converter.decode(preds.data, preds_size.data, raw=True)
+                values.extend(sim_pred)
                 if debug:
-                    print('\n    ', raw_pred, '\n =>', sim_pred, '\ngt:', cpu_texts[0])
+                    print('\n   ', raw_pred)
+                    print(' =>', sim_pred)
                     cv_img = cpu_images[0].permute(1, 2, 0).numpy()
                     cv_img_bgr = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
                     cv2.imshow('result', cv_img_bgr)
@@ -182,16 +285,7 @@ class Classifier_CRNN:
         # processing_time = end - begin
         # print('Processing time:', processing_time)
         # print('Speed:', num_files / processing_time, 'fps')
-
-
-exp = 'DB_Liao/config/aicr_ic15_resnet18.yaml'
-img_path = 'data/Eval/imgs/SCAN_20191128_145142994_002.jpg'
-model_name = 'model_epoch_115_minibatch_72000'
-ckpt_path = 'DB_Liao/outputs/' + model_name
-polygon = False
-visualize = False
-box_thres = 0.315
-img_short_side = 736  # 736
+        return values
 
 
 def crop_from_img_rectangle(img, left, top, right, bottom):
@@ -202,86 +296,28 @@ def crop_from_img_rectangle(img, left, top, right, bottom):
     left = max(0, left - extend_x)
     right = min(img.shape[1], right + extend_x)
     if left >= right or top >= bottom or left < 0 or right < 0 or left >= img.shape[1] or right >= img.shape[1]:
-        return None
-    return img[top:bottom, left:right]
+        return True, None
+    return False, img[top:bottom, left:right]
 
 
 def get_boxes_data(img, boxes):
     boxes_data = []
-    for box in boxes:
-        box = np.array(box).astype(np.int32).reshape(-1, 2)
-        left = min(box[0][0], box[3][0])
-        top = min(box[0][1], box[1][1])
-        right = max(box[1][0], box[2][0])
-        bottom = max(box[2][1], box[3][1])
+    boxes_info = []
+    for box_loc in boxes:
+        box_loc = np.array(box_loc).astype(np.int32).reshape(-1, 2)
+        left = min(box_loc[0][0], box_loc[3][0])
+        top = min(box_loc[0][1], box_loc[1][1])
+        right = max(box_loc[1][0], box_loc[2][0])
+        bottom = max(box_loc[2][1], box_loc[3][1])
         if (right - left) < 20 or (bottom - top) < 10:
             continue
-        box_data = crop_from_img_rectangle(img, left, top, right, bottom)
+        NG, box_data = crop_from_img_rectangle(img, left, top, right, bottom)
+        if NG:
+            continue
+        box_info = bbox(left,top,right,bottom)
+        boxes_info.append(box_info)
         boxes_data.append(box_data)
-    return boxes_data
-
-
-def init_models(args, gpu='0'):
-    if gpu != None:
-        print('Use GPU',gpu)
-        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
-    else:
-        print('Use CPU')
-    conf = Config()
-    experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
-    experiment_args.update(cmd=args)
-    experiment = Configurable.construct_class_from_config(experiment_args)
-    detector = Detector_DB(experiment, experiment_args,gpu=gpu, cmd=args)
-    classifier = Classifier_CRNN(ckpt_path='crnn_pbcquoc/outputs/AICR_pretrained_48.pth', gpu=gpu)
-    return detector, classifier
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Text Recognition Training')
-    parser.add_argument('--exp', type=str, default=exp)
-    parser.add_argument('--resume', type=str, help='Resume from checkpoint', default=ckpt_path)
-    parser.add_argument('--result_dir', type=str, default='./demo_results/', help='path to save results')
-    parser.add_argument('--data', type=str,
-                        help='The name of dataloader which will be evaluated on.')
-    parser.add_argument('--image_short_side', type=int, default=img_short_side,
-                        help='The threshold to replace it in the representers')
-    parser.add_argument('--thresh', type=float,
-                        help='The threshold to replace it in the representers')
-    parser.add_argument('--box_thresh', type=float, default=box_thres,
-                        help='The threshold to replace it in the representers')
-    parser.add_argument('--resize', action='store_true', help='resize')
-    parser.add_argument('--visualize', default = visualize, help='visualize maps in tensorboard')
-    parser.add_argument('--polygon', help='output polygons if true', default=polygon)
-    parser.add_argument('--eager', '--eager_show', action='store_true', dest='eager_show',
-                        help='Show iamges eagerly')
-
-    args = parser.parse_args()
-    args = vars(args)
-    args = {k: v for k, v in args.items() if v is not None}
-
-    # initialize
-    begin_init = time.time()
-    detector, classifier = init_models(args, gpu=None)
-    end_init = time.time()
-    print('Init models time:', end_init - begin_init, 'seconds')
-
-    boxes_list = detector.inference(img_path, visualize)
-
-    end_detector = time.time()
-    print('Detector time:', end_detector - end_init, 'seconds')
-
-    test_img = cv2.imread(img_path)
-
-    boxes_data = get_boxes_data(test_img, boxes_list)
-
-    end_get_boxes_data = time.time()
-    print('Get boxes time:', end_get_boxes_data - end_detector, 'seconds')
-    classifier.inference(boxes_data)
-
-    end_classifier = time.time()
-    print('Classifier time:', end_classifier - end_get_boxes_data, 'seconds')
-    print('\nTotal predict time:', end_classifier - end_init, 'seconds')
-    print('Done')
+    return boxes_data, boxes_info
 
 
 if __name__ == '__main__':

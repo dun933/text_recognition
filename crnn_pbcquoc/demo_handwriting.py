@@ -1,17 +1,12 @@
 import torch
 from torch.autograd import Variable
-from models.utils import strLabelConverter, resizePadding
-from PIL import Image
-import sys
+from models.utils import strLabelConverter
 import models.crnn as crnn
-import argparse
-from torch.nn.functional import softmax
-import numpy as np
 import time, os
+
 import cv2
 from loader import ImageFileLoader, alignCollate, NumpyListLoader
 import models.utils as utils
-import matplotlib.pyplot as plt
 import config
 
 #output_dir = 'outputs/train_' + training_time
@@ -80,8 +75,11 @@ def predict(dir, batch_sz, max_iter = 10000):
             preds = preds.transpose(1, 0).contiguous().view(-1)
             sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
             raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
+            #print('    ', raw_pred)
+            #print(' =>', sim_pred)
+            print(sim_pred)
+            #print('gt:', cpu_texts[0])
             if debug:
-                print('\n    ', raw_pred, '\n =>', sim_pred, '\ngt:', cpu_texts[0])
                 cv_img= cpu_images[0].permute(1, 2, 0).numpy()
                 cv_img_bgr = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
                 cv2.imshow('result', cv_img_bgr)

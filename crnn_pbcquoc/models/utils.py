@@ -50,8 +50,6 @@ def resizePadding(img, width, height):
         new_img.paste(img, (0, 0))
         img = new_img
 
-    img.save("after.jpg")
-    
     img = ToTensor()(img)
     img = Normalize(mean, std)(img)
 

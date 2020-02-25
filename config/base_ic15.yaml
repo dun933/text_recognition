@@ -1,14 +1,14 @@
 import:
-    - 'experiments/base.yaml'
+    - 'config/base.yaml'
 package:
     - 'decoders.seg_detector_loss'
 define:
   - name: train_data
     class: ImageDataset
     data_dir:
-        - 'datasets/Eval_corpus'
+        - 'DB_Liao/datasets/Eval_corpus'
     data_list:
-        - 'datasets/Eval_corpus/train_list.txt'
+        - 'DB_Liao/datasets/Eval_corpus/train_list.txt'
     processes:
         - class: AugmentDetectionData
           augmenter_args:
@@ -28,9 +28,9 @@ define:
   - name: validate_data
     class: ImageDataset
     data_dir:
-        - 'datasets/Eval_corpus/'
+        - 'DB_Liao/datasets/Eval_corpus/'
     data_list:
-        - 'datasets/Eval_corpus/test_list.txt'
+        - 'DB_Liao/datasets/Eval_corpus/test_list.txt'
     processes:
         - class: AugmentDetectionData
           augmenter_args:

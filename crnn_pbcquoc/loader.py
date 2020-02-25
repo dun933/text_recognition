@@ -18,6 +18,7 @@ def default_flist_reader(root, flist):
     else:
         file_names = [fn for fn in os.listdir(root)
                       if any(fn.endswith(ext) for ext in img_exts)]
+        file_names = sorted(file_names)
         for file in file_names:
             imlabel = os.path.splitext(file)[0] + '.txt'
             imlist.append((file, imlabel))
