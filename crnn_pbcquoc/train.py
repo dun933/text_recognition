@@ -39,11 +39,9 @@ batch_size = config.batch_size
 class writer:
     def __init__(self, *writers):
         self.writers = writers
-
     def write(self, text):
         for w in self.writers:
             w.write(text)
-
     def flush(self):
         pass
 
@@ -157,7 +155,7 @@ def val(net, data_loader, criterion, max_iter=1000):
     with torch.no_grad():
         for i in range(max_iter):
             data = val_iter.next()
-            cpu_images, cpu_texts = data
+            cpu_images, cpu_texts, _ = data
             batch_sz = cpu_images.size(0)
             utils.loadData(image, cpu_images)
             t, l = converter.encode(cpu_texts)
@@ -184,9 +182,10 @@ def val(net, data_loader, criterion, max_iter=1000):
 
 
 def trainBatch(net, data, criterion, optimizer):
-    cpu_images, cpu_texts = data
+    cpu_images, cpu_texts, img_paths = data
     batch_sz = cpu_images.size(0)
     utils.loadData(image, cpu_images)
+    #print('cputext:',cpu_texts, 'img path:',img_paths)
     t, l = converter.encode(cpu_texts)
     utils.loadData(text, t)
     utils.loadData(length, l)

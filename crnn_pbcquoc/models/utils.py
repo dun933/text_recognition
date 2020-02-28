@@ -6,13 +6,14 @@ import torch.nn as nn
 from torch.autograd import Variable
 import collections
 import Levenshtein
-#import tensorflow as tf
+# import tensorflow as tf
 import numpy as np
 from PIL import Image
 from torchvision.transforms import ToTensor, Normalize
 
-mean=[0.485, 0.456, 0.406]
-std=[0.229, 0.224, 0.225]
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
+
 
 # class BeamSearchDecoder():
 #     def __init__(self, lib, corpus, chars, word_chars, beam_width=20, lm_type='Words', lm_smoothing=0.01, tfsess=None):
@@ -37,16 +38,16 @@ std=[0.229, 0.224, 0.225]
 
 
 def resizePadding(img, width, height):
-    desired_w, desired_h = width, height #(width, height)
+    desired_w, desired_h = width, height  # (width, height)
     img_w, img_h = img.size  # old_size[0] is in (width, height) format
-    ratio = 1.0*img_w/img_h
-    new_w = int(desired_h*ratio)
+    ratio = 1.0 * img_w / img_h
+    new_w = int(desired_h * ratio)
     new_w = new_w if desired_w == None else min(desired_w, new_w)
     img = img.resize((new_w, desired_h), Image.ANTIALIAS)
 
     # padding image
     if desired_w != None and desired_w > new_w:
-        new_img = Image.new("RGB", (desired_w, desired_h), color=255)
+        new_img = Image.new("RGB", (desired_w, desired_h), color=(255, 255, 255))
         new_img.paste(img, (0, 0))
         img = new_img
 
@@ -54,12 +55,14 @@ def resizePadding(img, width, height):
     img = Normalize(mean, std)(img)
 
     return img
-    
+
+
 def maxWidth(sizes, height):
-    ws = [int(height*(1.0*size[0]/size[1])) for size in sizes]
+    ws = [int(height * (1.0 * size[0] / size[1])) for size in sizes]
     maxw = max(ws)
 
     return maxw
+
 
 class strLabelConverter(object):
     """Convert between str and label.
@@ -102,8 +105,8 @@ class strLabelConverter(object):
         elif isinstance(text, collections.Iterable):
             length = [len(s) for s in text]
             text = ''.join(text)
-            text, _ = self.encode(text)  
-                
+            text, _ = self.encode(text)
+
         return (torch.IntTensor(text), torch.IntTensor(length))
 
     def decode(self, t, length, raw=False):
@@ -121,7 +124,8 @@ class strLabelConverter(object):
         """
         if length.numel() == 1:
             length = length[0]
-            assert t.numel() == length, "text with length: {} does not match declared length: {}".format(t.numel(), length)
+            assert t.numel() == length, "text with length: {} does not match declared length: {}".format(t.numel(),
+                                                                                                         length)
             if raw:
                 return ''.join([self.alphabet[i - 1] for i in t])
             else:
@@ -132,7 +136,8 @@ class strLabelConverter(object):
                 return ''.join(char_list)
         else:
             # batch mode
-            assert t.numel() == length.sum(), "texts with length: {} does not match declared length: {}".format(t.numel(), length.sum())
+            assert t.numel() == length.sum(), "texts with length: {} does not match declared length: {}".format(
+                t.numel(), length.sum())
             texts = []
             index = 0
             for i in range(length.numel()):
@@ -200,12 +205,14 @@ def assureRatio(img):
         img = main(img)
     return img
 
+
 def cer_loss_one_image(sim_pred, label):
-    if(max(len(sim_pred), len(label))>0):
+    if (max(len(sim_pred), len(label)) > 0):
         loss = Levenshtein.distance(sim_pred, label) * 1.0 / max(len(sim_pred), len(label))
     else:
         return 0
     return loss
+
 
 def cer_loss(sim_preds, labels):
     losses = []

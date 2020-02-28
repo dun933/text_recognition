@@ -108,8 +108,6 @@ def visualize_results(img, boxes_info, inch=40):
     print('Save image to', save_img_path)
     fig.savefig(save_img_path, bbox_inches='tight')
 
-
-
 def init_models(args, gpu='0'):
     if gpu != None:
         print('Use GPU', gpu)

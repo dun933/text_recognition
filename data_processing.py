@@ -408,50 +408,6 @@ def convert_to_gray(src_dir, dst_dir):
         dst_file=os.path.join(dst_dir, file.replace('.png','_gray.jpg'))
         cv2.imwrite(dst_file, img)
 
-def transform_image(img, affine_trans, shape=[1015,1310]):
-    print('transform')
-    dst = cv2.warpAffine(img, affine_trans, (shape[0], shape[1]))
-    return dst
-    #plt.subplot(121), plt.imshow(img), plt.title('Input')
-    #plt.subplot(122), plt.imshow(dst), plt.title('Output')
-    #plt.show()
-
-def transform_image_from_dir(src_dir=None):
-    #pts1 = np.float32([[121.5, 76.5], [843, 511], [144, 1194.5]]) #190715070300858_8477720695_pod_gray
-    #pts1 = np.float32([[123.5, 75.5], [830, 525.5], [129, 1193.5]]) #190715070305240_8477720669_pod_gray
-    pts1 = np.float32([[118.5, 74], [837, 511.5], [138.5, 1195.5]]) #190715070307992_8477719722_pod_gray
-    pts1 = np.float32([[142.5, 69.5], [827, 510.5], [155.5, 1192.5]]) #190715070309284_8478218758_pod_gray
-    pts2 = np.float32([[126.5, 73.5], [844, 514], [139, 1191.5]])
-
-    pts1 = np.float32([[267.5, 332.5], [2147, 2424.5], [248.5, 3397.5]]) #0001_cuongnt
-    pts2 = np.float32([[270.5, 325.5], [2133, 2431], [227, 3390.5]]) #0001_tungnt
-    pts1 = np.float32([[270.5, 315.5], [2130.5, 2422], [224.5, 3380.5]]) #ori
-
-    M = cv2.getAffineTransform(pts1, pts2)
-    src_file='C:/Users/nd.cuong1/Downloads/Template_Matching-master/data/test_tm/sample/190715070309284_8478218758_pod_gray.jpg'
-    img = cv2.imread(src_file, 0)
-    trans_img = transform_image(img, M)
-    cv2.imwrite(src_file.replace('.jpg','_transform.jpg'), trans_img)
-    crop_img = crop_image(trans_img)
-    cv2.imwrite(src_file.replace('.jpg','_crop_ori.jpg'), crop_img)
-    result_inv = background_subtract(crop_img)
-    cv2.imwrite(src_file.replace('.jpg','_crop_ori_subtract_inv_anchor.jpg'),result_inv)
-
-def crop_image(input_img, bbox=[905,1010,1300,138]):
-    print('crop')
-    offset_x = 0
-    offset_y = 0
-    crop_img = input_img[bbox[1]+offset_y:bbox[1] + bbox[3]+offset_y, bbox[0]+offset_x:bbox[0] + bbox[2]+offset_x]
-    return crop_img
-
-def background_subtract(image):
-    bgr_path='C:/Users/nd.cuong1/Downloads/Template_Matching-master/data/test_tm/field1.jpg'
-    background=cv2.imread(bgr_path, 0)
-    result = cv2.subtract(background, image)
-    result_inv = cv2.bitwise_not(result)
-    #cv2.imshow('result',result_inv)
-    #cv2.waitKey(0)
-    return result_inv
 
 def convert_png2jpg(src_dir, dst_dir):
     list_file=get_list_file_in_folder(src_dir)
@@ -541,13 +497,13 @@ if __name__== "__main__":
     #gen_random_symbol_corpus()
     #combine_corpus("/data/CuongND/aicr_vn/textimg_data_generator_dev/corpus")
     #os.rename(src_dir+'\nbackground',src_dir+'background')
-    #transform_image_from_dir()
+    transform_image_from_dir()
     #test_background_subtract()
     src='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_images2_ori_3'
     dst='C:/Users/nd.cuong1/PycharmProjects/aicr_vn/textimg_data_generator_dev_vn/data/bg_img_jpg'
     #convert_png2jpg(src,dst)
     #gen_train_txt('/home/duycuong/PycharmProjects/research_py3/ss_source/data_generator/outputs/corpus_10000_2020-02-08_18-05/train_images')
-    check_icdar_sample('/home/duycuong/PycharmProjects/research_py3/text_recognition/DB_Liao/datasets/Eval_corpus/train_images', anno_ext='gt')
+    #check_icdar_sample('/home/duycuong/PycharmProjects/research_py3/text_recognition/DB_Liao/datasets/Eval_corpus/train_images', anno_ext='gt')
     src='/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/data/bg_img_jpg'
     dst='/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/data/bg_img_png'
     #convert_jpg2png(src,dst)

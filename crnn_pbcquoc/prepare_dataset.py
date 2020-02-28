@@ -11,6 +11,10 @@ def get_list_file_in_folder(dir, ext='png'):
                   if any(fn.endswith(ext) for ext in included_extensions)]
     return file_names
 
+def get_list_dir_in_folder(dir):
+    sub_dir = [o for o in os.listdir(dir) if os.path.isdir(os.path.join(dir, o))]
+    return sub_dir
+
 
 def crop_from_img_rectangle(img, left, top, right, bottom):
     extend_y = max(int((bottom - top) / 3), 4)
@@ -82,15 +86,30 @@ def prepare_train_from_icdar(data_dir, output_dir):
     print('Total word:', count)
 
 
-def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=0.95, convert=False):
+def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=0.9, convert=False):
     list_dir_txt = []
     print('root dir:', root_dir)
+    from unicode_utils import compound_unicode
     for dir in list_dir:
+        if os.path.exists(os.path.join(root_dir,dir,'origine.jpg')):
+            os.remove(os.path.join(root_dir,dir,'origine.jpg'))
+            print('remove file',os.path.join(root_dir,dir,'origine.jpg'))
         list_files = get_list_file_in_folder(os.path.join(root_dir, dir))
         #convert_json_to_multiple_gt(os.path.join(root_dir, dir))
         print('Dir ', dir, 'has', len(list_files), 'files')
         for idx, file in enumerate(list_files):
+            print(file)
             list_dir_txt.append(os.path.join(dir, file))
+
+            #fix unicode
+            txt_file=os.path.join(root_dir,dir, file).replace('.jpg','.txt')
+            with open(txt_file, 'r', encoding='utf-8') as f:
+                txt= f.readlines()
+            if len(txt)>0:
+                new_text=compound_unicode(txt[0])
+                with open(txt_file, 'w', encoding='utf-8') as f:
+                    f.write(new_text)
+
 
     random.shuffle(list_dir_txt)
     print('\ntotal files:', len(list_dir_txt))
@@ -139,8 +158,10 @@ def convert_json_to_multiple_gt(dir, json_name='labels.json'):
 
 if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
-    root_dir = '/data/dataset/cinnamon_data'
-    list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test','0825_DataSamples_dots', '0916_DataSamples_dots', '1015_Private Test_dots','0825_DataSamples_linedots', '0916_DataSamples_linedots', '1015_Private Test_linedots','0825_DataSamples_lines', '0916_DataSamples_lines', '1015_Private Test_lines']
+    root_dir = '/data/aicr_data_hw/cleaned_data_merge'
+    list_dir=get_list_dir_in_folder(root_dir)
+    list_dir = sorted(list_dir)
+    #list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test','0825_DataSamples_dots', '0916_DataSamples_dots', '1015_Private Test_dots','0825_DataSamples_linedots', '0916_DataSamples_linedots', '1015_Private Test_linedots','0825_DataSamples_lines', '0916_DataSamples_lines', '1015_Private Test_lines']
     prepare_train_test_from_multiple_dir(root_dir, list_dir)
     #prepare_txt_file('/home/duycuong/PycharmProjects/research_py3/text_recognition/EAST_argman/outputs/predict_handwriting_model.ckpt-45451/trang_new')
     # prepare_train_from_icdar(icdar_dir, output_dir)

@@ -30,10 +30,10 @@ class alignCollate(object):
         self.imgW = imgW
 
     def __call__(self, batch):
-        images, labels = zip(*batch)
+        images, labels, img_paths = zip(*batch)
         images = [resizePadding(image, self.imgW, self.imgH) for image in images]
         images = torch.cat([t.unsqueeze(0) for t in images], 0)
-        return images, labels
+        return images, labels, img_paths
 
 class ImageFileLoader(data.Dataset):
     def __init__(self, root,  flist = '', flist_reader = default_flist_reader, transform=None, label=True):
@@ -49,10 +49,10 @@ class ImageFileLoader(data.Dataset):
         img = Image.open(imgpath).convert('RGB')
         if self.transform is not None:
             img = self.transform(img)
-        label = 'no annotation'
+        label = ''
         if self.label:
             label = open(labelpath.replace('/images/', '/annos/')).read().rstrip('\n')
-        return img, label
+        return img, label, imgpath
 
     def __len__(self):
         return len(self.imlist)
@@ -67,7 +67,7 @@ class NumpyListLoader(data.Dataset):  #no label
         img = Image.fromarray(imdata).convert('RGB')
         if self.transform is not None:
             img = self.transform(img)
-        return img, 'no annotation'
+        return img, '', ''
 
     def __len__(self):
         return len(self.imlist)

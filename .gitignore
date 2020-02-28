@@ -9,6 +9,7 @@ warp-ctc/
 *.pth
 *.hdf5
 weights*
+*.pickle
 
 #text-detection-ctpn
 data/dataset/
