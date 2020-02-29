@@ -166,6 +166,6 @@ if __name__== "__main__":
     for idx in range(len(imgs)):
         imgs[idx]=os.path.join(img_dir,imgs[idx])
 
-    img_path='/data/data_imageVIB/vib_page1/vib_page1-15.jpg'
+    img_path='/data/data_imageVIB/vib_page1/vib_page1-23.jpg'
     predict([img_path], batch_size=batch_size)
 
