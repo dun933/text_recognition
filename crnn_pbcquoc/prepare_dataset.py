@@ -6,7 +6,7 @@ output_dir = '/home/duycuong/PycharmProjects/dataset/aicr_icdar_new'
 
 
 def get_list_file_in_folder(dir, ext='png'):
-    included_extensions = ['png', 'jpg']
+    included_extensions = ['jpg', 'png', 'JPG', 'PNG']
     file_names = [fn for fn in os.listdir(dir)
                   if any(fn.endswith(ext) for ext in included_extensions)]
     return file_names
@@ -26,7 +26,6 @@ def crop_from_img_rectangle(img, left, top, right, bottom):
     if left >= right or top >= bottom or left < 0 or right < 0 or left >= img.shape[1] or right >= img.shape[1]:
         return None
     return img[top:bottom, left:right]
-
 
 def prepare_train_from_icdar(data_dir, output_dir):
     try:
@@ -84,7 +83,6 @@ def prepare_train_from_icdar(data_dir, output_dir):
         f.write(test_txt)
     print('max width height ratio in dataset', max_wh)
     print('Total word:', count)
-
 
 def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=0.9, convert=False):
     list_dir_txt = []
@@ -156,12 +154,63 @@ def convert_json_to_multiple_gt(dir, json_name='labels.json'):
             with open(os.path.join(dir, gt_name), 'w', encoding='utf-8') as f:
                 f.write(value)
 
+def crop_collected_data(dir, file_list=['2','8','14','20'], debug=False):
+    list_files = get_list_file_in_folder(dir)
+    for file in list_files:
+        if file.replace('.jpg','') in file_list:
+            file_path=os.path.join(dir,file)
+            print(file_path)
+            ori_img= cv2.imread(file_path)
+            crop_img=ori_img[0:82,0:ori_img.shape[1]]
+            if debug:
+                cv2.imshow('result',crop_img)
+                cv2.waitKey(0)
+            cv2.imwrite(file_path, crop_img)
+
+def temp():
+    import json
+    with open('temp.json', 'w', encoding='utf-8') as f:
+        json.dump('Đường Nguyễn Phong Sắc, Huyện Thủy Nguyên, Hải Phòng, Đường Lâm Hạ, Quận Long Biên, Hà Nội,  ̀', f,
+                  ensure_ascii=True)
+
+def crop_collected_data2(dir, debug=False):
+    list_files = get_list_file_in_folder(dir)
+    count1=0
+    count2=0
+    for file in list_files:
+        file_path = os.path.join(dir, file)
+        print(file_path)
+        ori_img = cv2.imread(file_path)
+        if ori_img.shape[1]/ori_img.shape[0]>9:
+            count1+=1
+            extend_val=  int(ori_img.shape[0]/9)+3
+            print ('count1',count1,'extend val',extend_val,'height',ori_img.shape[0])
+            crop_img = ori_img[extend_val:ori_img.shape[0] - extend_val - 1, 0:ori_img.shape[1]]
+            if debug:
+                cv2.imshow('ttt', crop_img)
+                cv2.waitKey(0)
+            cv2.imwrite(file_path, crop_img)
+        elif ori_img.shape[1]/ori_img.shape[0]>7:
+            count2+=1
+            extend_val=  int(ori_img.shape[0]/9)+1
+            print ('count2',count2,'extend val',extend_val,'height',ori_img.shape[0])
+            crop_img = ori_img[extend_val:ori_img.shape[0] - extend_val - 1, 0:ori_img.shape[1]]
+            cv2.imwrite(file_path, crop_img)
+        if debug:
+            cv2.imshow('result', ori_img)
+            cv2.waitKey(0)
+
+
 if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
-    root_dir = '/data/aicr_data_hw/cleaned_data_merge'
+    root_dir = '/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed'
     list_dir=get_list_dir_in_folder(root_dir)
     list_dir = sorted(list_dir)
     #list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test','0825_DataSamples_dots', '0916_DataSamples_dots', '1015_Private Test_dots','0825_DataSamples_linedots', '0916_DataSamples_linedots', '1015_Private Test_linedots','0825_DataSamples_lines', '0916_DataSamples_lines', '1015_Private Test_lines']
-    prepare_train_test_from_multiple_dir(root_dir, list_dir)
+    #prepare_train_test_from_multiple_dir(root_dir, list_dir)
     #prepare_txt_file('/home/duycuong/PycharmProjects/research_py3/text_recognition/EAST_argman/outputs/predict_handwriting_model.ckpt-45451/trang_new')
     # prepare_train_from_icdar(icdar_dir, output_dir)
+    img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
+    crop_collected_data2(img_dir)
+    # for dir in list_dir:
+    #     crop_collected_data(os.path.join(root_dir,dir))

@@ -84,7 +84,8 @@ def predict(dir, batch_sz, max_iter=10000):
             if debug:
                 inv_tensor = inv_normalize(cpu_images[0])
                 cv_img = inv_tensor.permute(1, 2, 0).numpy()
-                cv2.imshow('image data', cv_img)
+                cv_img_convert = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+                cv2.imshow('image data', cv_img_convert)
                 cv2.waitKey(0)
     end = time.time()
     processing_time = end - begin

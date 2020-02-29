@@ -17,11 +17,11 @@ ckpt_prefix = 'AICR_trained_new_data'
 
 #test
 test_dir='/data/dataset/cinnamon_data/1015_Private Test'
-test_dir='/data/aicr_data_hw/image_crop/aicrhw_2020-02-27_16-35/AICR_P0000038'
+test_dir='/home/duycuong/PycharmProjects/dataset/cinnamon_data/cinamon_1015'
 #pretrained_test='outputs/train_2020-02-20_09-03_finetune_cinamon_input32/AICR_pretrained_59.pth'  #appr 1
 #pretrained_test='outputs/train_2020-02-20_16-58_train_cinamon_data/AICR_pretrained_74.pth'  #appr 2
 #pretrained_test='outputs/train_2020-02-23_16-21_finetune_cinamon_input64/AICR_pretrained_53.pth'  #appr 3
-pretrained_test='outputs/train_2020-02-24_20-41_finetune_cinamon_input64_augmented/AICR_pretrained_61.pth'  #appr 4 AICR_pretrained_7
+pretrained_test='outputs/train_2020-02-28_18-01/AICR_trained_new_data_132.pth'  #appr 4 AICR_pretrained_7
 #pretrained_test='outputs/train_2020-02-24_20-41_finetune_cinamon_input64_augmented/AICR_pretrained_7.pth'  #to test NLP
 label = False
 test_list=''

@@ -1,6 +1,6 @@
 import pkg_resources
-from symspellpy import SymSpell, Verbosity
-import os, json, pickle, re
+from symspellpy2.symspellpy import SymSpell
+import pickle, re
 import time
 
 
@@ -79,43 +79,10 @@ def load_address_correction(db_file, ):
         provinces['districts'] = districts
         full_db['provinces'][name_province] = provinces
     print(full_db)
-    # suggestions = province_correct.lookup_compound('Hà Giaiagg', max_edit_distance=5)
-    # # display suggestion term, edit distance, and term frequency
-    # for suggestion in suggestions:
-    #     print(suggestion)
 
     with open('full_db' + '.pickle', 'wb') as handle:
         pickle.dump(full_db, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # return full_db
-
-
-# prov_spell = spell_correcting(dictionary_file="freq_provinces_dic.txt", bigram_file="freq_provinces_bigram.txt",
-#                               max__distance=5, prefix_length=7)
-#
-# input_term = "Đng Nai"
-#
-# suggestions = prov_spell.lookup_compound(input_term, max_edit_distance=5)
-# # display suggestion term, edit distance, and term frequency
-# for suggestion in suggestions:
-#     print(suggestion)
-
-# with open('provices_name.txt', 'r', encoding='utf-8') as f:
-#     provinces = f.read().splitlines()
-#
-# spell_data = {}
-#
-# for prov in provinces:
-#     dictionary_file = os.path.join('provinces', prov.replace(' ', '_') + '_freq_dic.txt')
-#     bigram_file = os.path.join('provinces', prov.replace(' ', '_') + '_freq_bigram.txt')
-#     spell_data[prov] = spell_correcting(dictionary_file=dictionary_file, bigram_file=bigram_file)
-#
-#
-# suggestions = spell_data['sơn la'].lookup_compound(input_term, max_edit_distance=5)
-# # display suggestion term, edit distance, and term frequency
-# for suggestion in suggestions:
-#     print(suggestion)
-# #
 
 def load_address_correction(db_path):
     with open(db_path, 'rb') as handle:
@@ -123,12 +90,21 @@ def load_address_correction(db_path):
     return db
 
 def correct_address(db, street=None, ward=None, district=None, city=None):
+
+    def capitalize_(str_in):
+        name_list = str_in.split(' ')
+        name_out = []
+        for word in name_list:
+            name_out.append(word.capitalize())
+        # print(name_out)
+        # ouput.append()
+        return ' '.join(name_out)
     output = {}
     city_suggestions = db['province_correct'].lookup_compound(city, max_edit_distance=5)
     # display suggestion term, edit distance, and term frequency
     for city_suggestion in city_suggestions:
         city_fixed = city_suggestion._term
-        output['city'] = city_fixed
+        output['city'] = capitalize_(city_fixed)
         patterns_tp = ['thành phố', 'tp', 'tphố']
         for pattern in patterns_tp:
             group = re.search(pattern, city_fixed)
@@ -139,7 +115,7 @@ def correct_address(db, street=None, ward=None, district=None, city=None):
                                                                                                    max_edit_distance=5)
             for district_suggestion in district_suggestions:
                 district_fixed = district_suggestion._term
-                output['district'] = district_fixed
+                output['district'] = capitalize_(district_fixed)
                 patterns = ['quận', 'huyện', 'thành phố', 'tp', 'thị xã']
                 for pattern in patterns:
                     group = re.search(pattern, district_fixed)
@@ -151,13 +127,13 @@ def correct_address(db, street=None, ward=None, district=None, city=None):
                             'ward_correct'].lookup_compound(remove_accents(ward),
                                                             max_edit_distance=5)
                         for ward_suggestion in ward_suggestions:
-                            output['ward'] = ward_suggestion._term
+                            output['ward'] = capitalize_(ward_suggestion._term)
                     if street != None:
                         street_suggestions = db['provinces'][city_fixed]['districts'][district_fixed][
                             'streets_correct'].lookup_compound(remove_accents(street),
                                                                max_edit_distance=5)
                         for street_suggestion in street_suggestions:
-                            output['street'] = street_suggestion._term
+                            output['street'] = capitalize_(street_suggestion._term)
 
     return output
 
@@ -169,7 +145,7 @@ if __name__ == "__main__":
     begin = time.time()
     inp = 'Khối 1, Phường Thu Thuỷ, Thị Xã Cửu Lò, Nghệ An'
 
-    out = correct_address(db=db, city='Nghệ An', district='Cửu Lò', ward='Thuu Thuỷ')
+    out = correct_address(db=db,  ward='Thuu Thuỷ', district='Cửu Lò', city='Nghệ An')
     end = time.time()
     print('Time', end-begin)
     print(out)

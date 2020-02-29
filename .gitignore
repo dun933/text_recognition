@@ -19,7 +19,6 @@ pretrain/
 VOCdevkit2007/
 logs/
 logs_*/
-output/
 build/
 dist/
 checkpoints/
