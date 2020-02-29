@@ -1,6 +1,6 @@
 from __future__ import print_function
 from __future__ import division
-import editdistance
+from symspellpy2 import editdistance
 import re
 
 
@@ -41,12 +41,12 @@ class Metrics:
 	def addSample(self, gt, rec):
 		"insert result and ground truth for next sample"
 		# chars
-		self.edChars+=editdistance.eval(gt, rec)
+		self.edChars+= editdistance.eval(gt, rec)
 		self.numChars+=len(gt)
 
 		# words
 		(idStrGt,idStrRec)=self.getWordIDStrings(gt, rec)
-		self.edWords+=editdistance.eval(idStrGt, idStrRec)
+		self.edWords+= editdistance.eval(idStrGt, idStrRec)
 		self.numWords+=len(idStrGt)
 
 

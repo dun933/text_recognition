@@ -1,6 +1,6 @@
 from __future__ import print_function
 from __future__ import division
-import editdistance
+from symspellpy2 import editdistance
 from Metrics import Metrics
 from DataLoader import DataLoader
 from WordBeamSearch import wordBeamSearch

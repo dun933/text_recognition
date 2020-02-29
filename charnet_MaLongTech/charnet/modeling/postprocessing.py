@@ -8,12 +8,10 @@
 from torch import nn
 import numpy as np
 import cv2
-import editdistance
+from symspellpy2 import editdistance
 from .utils import rotate_rect
-from .rotated_nms import nms, nms_with_char_cls, \
-    softnms, nms_poly
+from .rotated_nms import nms, nms_with_char_cls
 from shapely.geometry import Polygon
-import pyclipper
 
 
 def load_lexicon(path):

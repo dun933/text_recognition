@@ -2,18 +2,17 @@
 .. module:: symspellpy
    :synopsis: Module for Symmetric Delete spelling correction algorithm.
 """
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from enum import Enum
 import gzip
 from itertools import cycle
 import math
 import os.path
 import pickle
-import re
 import sys
 from difflib import SequenceMatcher
-from editdistance import DistanceAlgorithm, EditDistance
-import symspellpy.helpers as helpers
+from symspellpy2.editdistance import DistanceAlgorithm, EditDistance
+from symspellpy2 import helpers as helpers
 import re
 
 

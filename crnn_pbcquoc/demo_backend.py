@@ -5,14 +5,14 @@ import models.crnn as crnn
 import time, os
 
 import cv2
-from loader import ImageFileLoader, alignCollate, NumpyListLoader
+from loader import alignCollate, NumpyListLoader
 import models.utils as utils
 import config
 from torchvision import transforms
 from image_preprocessing import extract_for_demo
 from image_calibration import calib_image
-from address_spell_check import load_address_correction, correct_address
-from name_spell_check import load_name_corection, correct_name
+from symspellpy2.address_spell_check import load_address_correction, correct_address
+from symspellpy2.name_spell_check import load_name_corection, correct_name
 
 img_dir = '/data/data_imageVIB/vib_page1'
 test_list=config.test_list
