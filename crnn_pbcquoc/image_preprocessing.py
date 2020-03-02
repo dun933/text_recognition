@@ -5,6 +5,7 @@ import math
 import os
 from os import listdir
 from datetime import datetime
+import shutil
 import random
 from table_border_extraction_fns import get_h_and_v_line_bbox, \
     clTable, get_h_and_v_line_bbox_CNX, filter_lines_error, detect_table
@@ -505,7 +506,7 @@ def removeLines(img, margin=5, expand_bb=2, b_erase_img=True, pixel_erase=3):
     else:
         return None
 
-def augment_image_addline(img,type = 0,size_draw  = 3, range_dot = 15,sizelinedot = 1):
+def augment_image_addline(img,type = 0,size_draw  = 3, range_dot = 15, sizelinedot = 1, black = True):
     #type 0 solid line, 1 dots line,2 line dot
     img2 = img.copy()
     h_img = img.shape[0]
@@ -526,27 +527,58 @@ def augment_image_addline(img,type = 0,size_draw  = 3, range_dot = 15,sizelinedo
             sum_h += (y+h)
             count+=1
             listbb.append([x,y,x+w,y+h])
-    h_average = int(sum_h/count)
-    if type == 0:
-        cv2.line(img2, (0, h_average-1), (w_img, h_average-1), (60, 60, 60), int(size_draw/3), cv2.LINE_AA)
-        cv2.line(img2, (0, h_average), (w_img, h_average), (40, 30, 30), int(size_draw/3), cv2.LINE_AA)
-        cv2.line(img2, (0, h_average+1), (w_img, h_average+1), (60, 60, 60), int(size_draw/3),  cv2.LINE_AA )
-    elif type == 1 or type == 2:
-        for i in range(int(w_img/range_dot)):
-            if type == 1:
-                centerx = int((i*range_dot) + int(size_draw/2))
-                centery = h_average - int((size_draw)/2)
-                cv2.circle(img2,(centerx,centery),size_draw,(40,30,30),-1)
-            elif type == 2:
-                size_line = int(range_dot/sizelinedot)
-                beginl = int(i*range_dot) + int(i* size_line)
-                endl   = beginl+size_line
-                cv2.line(img2, (beginl, h_average - 1), (endl, h_average - 1), (60, 60, 60), int(size_draw / 3), cv2.LINE_AA)
-                cv2.line(img2, (beginl, h_average), (endl, h_average), (40, 30, 30), int(size_draw / 3), cv2.LINE_AA)
-                cv2.line(img2, (beginl, h_average + 1), (endl, h_average + 1), (60, 60, 60), int(size_draw / 3), cv2.LINE_AA)
+    if count>0:
+        h_average = int(sum_h / count)
+        if type == 0:
+            if black:
+                cv2.line(img2, (0, h_average - 1), (w_img, h_average - 1), (60, 60, 60), int(size_draw / 3), cv2.LINE_AA)
+                cv2.line(img2, (0, h_average), (w_img, h_average), (40, 30, 30), int(size_draw / 3), cv2.LINE_AA)
+                cv2.line(img2, (0, h_average + 1), (w_img, h_average + 1), (60, 60, 60), int(size_draw / 3), cv2.LINE_AA)
+            else:
+                cv2.line(img2, (0, h_average - 5), (w_img, h_average - 5), (236, 226, 226), int(size_draw / 3), cv2.LINE_AA)
+                cv2.line(img2, (0, h_average-4), (w_img, h_average-4), (236, 226, 226), int(size_draw / 3), cv2.LINE_AA)
+        elif type == 1 or type == 2:
+            for i in range(int(w_img / range_dot)):
+                if type == 1:
+                    centerx = int((i * range_dot) + int(size_draw / 2))
+                    centery = h_average - int((size_draw) / 2)
+                    cv2.circle(img2, (centerx, centery), size_draw, (40, 30, 30), -1)
+                elif type == 2:
+                    size_line = int(range_dot / sizelinedot)
+                    beginl = int(i * range_dot) + int(i * size_line)
+                    endl = beginl + size_line
+                    cv2.line(img2, (beginl, h_average - 1), (endl, h_average - 1), (60, 60, 60), int(size_draw / 3),
+                             cv2.LINE_AA)
+                    cv2.line(img2, (beginl, h_average), (endl, h_average), (40, 30, 30), int(size_draw / 3),
+                             cv2.LINE_AA)
+                    cv2.line(img2, (beginl, h_average + 1), (endl, h_average + 1), (60, 60, 60), int(size_draw / 3),
+                             cv2.LINE_AA)
+    else:
+        h_average = random.randint(int(img.shape[0]/2),img.shape[0]-1)
+        print('blank!!! h_average',h_average)
+        if type == 0:
+            cv2.line(img2, (0, h_average - 1), (w_img, h_average - 1), (60, 60, 60), int(size_draw / 3), cv2.LINE_AA)
+            cv2.line(img2, (0, h_average), (w_img, h_average), (40, 30, 30), int(size_draw / 3), cv2.LINE_AA)
+            cv2.line(img2, (0, h_average + 1), (w_img, h_average + 1), (60, 60, 60), int(size_draw / 3), cv2.LINE_AA)
+        elif type == 1 or type == 2:
+            for i in range(int(w_img / range_dot)):
+                if type == 1:
+                    centerx = int((i * range_dot) + int(size_draw / 2))
+                    centery = h_average - int((size_draw) / 2)
+                    cv2.circle(img2, (centerx, centery), size_draw, (40, 30, 30), -1)
+                elif type == 2:
+                    size_line = int(range_dot / sizelinedot)
+                    beginl = int(i * range_dot) + int(i * size_line)
+                    endl = beginl + size_line
+                    cv2.line(img2, (beginl, h_average - 1), (endl, h_average - 1), (60, 60, 60), int(size_draw / 3),
+                             cv2.LINE_AA)
+                    cv2.line(img2, (beginl, h_average), (endl, h_average), (40, 30, 30), int(size_draw / 3),
+                             cv2.LINE_AA)
+                    cv2.line(img2, (beginl, h_average + 1), (endl, h_average + 1), (60, 60, 60), int(size_draw / 3),
+                             cv2.LINE_AA)
     return img2
 
-def augment_random_rotate(img,begin, end):
+def augment_random_rotate(img, begin, end):
     angle = random.randrange(begin, end)
     img2 = rotate_image_angle(img, angle)
     return img2
@@ -581,6 +613,11 @@ def augment_random_erase(img, numb_char_erase):
         img2 = erase_img(img2, None, [xb, yb, xe, ye], 10)
     return img2
 
+
+def get_list_dir_in_folder(dir):
+    sub_dir = [o for o in os.listdir(dir) if os.path.isdir(os.path.join(dir, o))]
+    return sub_dir
+
 def list_files1(directory, extension):
     # print(listdir(directory))
     list_file = []
@@ -592,36 +629,98 @@ def list_files1(directory, extension):
 def gen_data_path(path,path_save):
     list_img = list_files1(path,"jpg")
     list_img += list_files1(path,"png")
-    dir_name = os.path.dirname(path)
-    save_dir_line = os.path.join(path_save, dir_name+"_lines")
+    dir_name = os.path.basename(path)
+    save_dir_line = os.path.join(path_save,'add_solid_line', dir_name)
 
     if not os.path.isdir(save_dir_line):
         os.mkdir(save_dir_line)
 
-    save_dir_dot = os.path.join(path_save, dir_name + "_dots")
+    save_dir_dot = os.path.join(path_save,'add_dots', dir_name)
     if not os.path.isdir(save_dir_dot):
         os.mkdir(save_dir_dot)
 
-    save_dir_ldot = os.path.join(path_save, dir_name + "_linedots")
+    save_dir_ldot = os.path.join(path_save,"add_linedots", dir_name )
     if not os.path.isdir(save_dir_ldot):
         os.mkdir(save_dir_ldot)
 
-    for img_path in list_img:
-        path_img = os.path.join(path,img_path)
-        print(path_img)
+    count=0
+    for img_name in list_img:
+        path_img = os.path.join(path,img_name)
+        count+=1
+        print(count, path_img)
         img = cv2.imread(path_img)
-        #line
+
+        anno_name=img_name.replace('.jpg','.txt').replace('.png','.txt')
+        anno_path_src=os.path.join(path,anno_name)
+        #solid
         rs = augment_image_addline(img, 0)
-        path_save = os.path.join(save_dir_line,img_path)
-        cv2.imwrite(path_save,rs)
-        # line
+        img_path_save = os.path.join(save_dir_line,img_name)
+        anno_path_save = os.path.join(save_dir_line,anno_name)
+        cv2.imwrite(img_path_save,rs)
+        shutil.copy(anno_path_src,anno_path_save)
+        # dots
         rs = augment_image_addline(img, 1)
-        path_save = os.path.join(save_dir_dot, img_path)
-        cv2.imwrite(path_save, rs)
-        # line
+        img_path_save = os.path.join(save_dir_dot,img_name)
+        anno_path_save = os.path.join(save_dir_dot,anno_name)
+        cv2.imwrite(img_path_save, rs)
+        shutil.copy(anno_path_src,anno_path_save)
+        # linedot
         rs = augment_image_addline(img, 2)
-        path_save = os.path.join(save_dir_ldot, img_path)
-        cv2.imwrite(path_save, rs)
+        img_path_save = os.path.join(save_dir_ldot,img_name)
+        anno_path_save = os.path.join(save_dir_ldot,anno_name)
+        cv2.imwrite(img_path_save, rs)
+        shutil.copy(anno_path_src,anno_path_save)
+
+def gen_white_data(path,path_save):
+    list_img = list_files1(path, "jpg")
+    list_img += list_files1(path, "png")
+    dir_name = os.path.basename(path)
+    save_dir_white_line = os.path.join(path_save, 'add_solid_white_line', dir_name)
+
+    if not os.path.isdir(save_dir_white_line):
+        os.mkdir(save_dir_white_line)
+
+
+    count = 0
+    for img_name in list_img:
+        path_img = os.path.join(path, img_name)
+        count += 1
+        print(count, path_img)
+        img = cv2.imread(path_img)
+
+        anno_name = img_name.replace('.jpg', '.txt').replace('.png', '.txt')
+        anno_path_src = os.path.join(path, anno_name)
+        # solid
+        rs = augment_image_addline(img, 0, black=False)
+        img_path_save = os.path.join(save_dir_white_line, img_name)
+        anno_path_save = os.path.join(save_dir_white_line, anno_name)
+        cv2.imwrite(img_path_save, rs)
+        shutil.copy(anno_path_src, anno_path_save)
+
+def gen_random_rotate(path,path_save):
+    list_img = list_files1(path, "jpg")
+    list_img += list_files1(path, "png")
+    dir_name = os.path.basename(path)
+    save_dir_rotate = os.path.join(path_save, 'add_rotate', dir_name)
+
+    if not os.path.isdir(save_dir_rotate):
+        os.mkdir(save_dir_rotate)
+
+    count = 0
+    for img_name in list_img:
+        path_img = os.path.join(path, img_name)
+        count += 1
+        print(count, path_img)
+        img = cv2.imread(path_img)
+
+        anno_name = img_name.replace('.jpg', '.txt').replace('.png', '.txt')
+        anno_path_src = os.path.join(path, anno_name)
+        # solid
+        rs = augment_random_rotate(img, -5,5)
+        img_path_save = os.path.join(save_dir_rotate, img_name)
+        anno_path_save = os.path.join(save_dir_rotate, anno_name)
+        cv2.imwrite(img_path_save, rs)
+        shutil.copy(anno_path_src, anno_path_save)
 
 def store_data_handwriting_template(path, path_config_file, save_path,expand_y = 0):
     list_img = list_files1(path, "jpg")
@@ -726,8 +825,15 @@ def store_data_handwriting_table(path, save_path,expand_y = 0):
     print("finished !!")
 
 if __name__ == "__main__":
-    view_boxes('form/template_VIB_page1.txt')
+    #view_boxes('form/template_VIB_page1.txt')
     path_img = "/data/aicr_data_hw/image_raw/SL/nd.cuong"
     #path_configfile = "venv/template_data.txt"
     path_save = "/data/aicr_data_hw/image_raw/SL/nd.cuong/crop/crop"
+
+    data_dir='/home/duycuong/PycharmProjects/dataset/cinnamon_data/train'
+    # list_dir=get_list_dir_in_folder(data_dir)
+    # for dir in list_dir:
+    #     gen_white_data(os.path.join(data_dir, dir),'/home/duycuong/PycharmProjects/dataset/augment')
+    gen_random_rotate('/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed/train/AICR_P0000001','/home/duycuong/PycharmProjects/dataset/augment')
+    #gen_data_path('/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed/train/AICR_P0000001','/home/duycuong/PycharmProjects/dataset/augment')
     #store_data_handwriting_table(path_img,path_save,0)
