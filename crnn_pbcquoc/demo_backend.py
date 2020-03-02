@@ -14,7 +14,7 @@ from image_calibration import calib_image
 from symspellpy2.address_spell_check import load_address_correction, correct_address
 from symspellpy2.name_spell_check import load_name_corection, correct_name
 
-img_dir = '/data/data_imageVIB/vib_page1'
+img_dir = '/home/duycuong/PycharmProjects/dataset/data_imageVIB/vib_page1'
 test_list=config.test_list
 pretrained = config.pretrained_test
 imgW = config.imgW
@@ -165,6 +165,6 @@ if __name__== "__main__":
     for idx in range(len(imgs)):
         imgs[idx]=os.path.join(img_dir,imgs[idx])
 
-    img_path='/data/data_imageVIB/vib_page1/vib_page1-22.jpg'
+    img_path='/home/duycuong/PycharmProjects/dataset/data_imageVIB/vib_page1/vib_page1-19.jpg'
     predict([img_path], batch_size=batch_size)
 

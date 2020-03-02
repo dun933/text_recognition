@@ -1,5 +1,7 @@
 import os, cv2, random
 import time
+import numpy as np
+import shutil
 
 icdar_dir = '/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-31_14-26/images'
 output_dir = '/home/duycuong/PycharmProjects/dataset/aicr_icdar_new'
@@ -84,14 +86,14 @@ def prepare_train_from_icdar(data_dir, output_dir):
     print('max width height ratio in dataset', max_wh)
     print('Total word:', count)
 
-def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=0.9, convert=False):
+def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=0.0, convert=False):
     list_dir_txt = []
     print('root dir:', root_dir)
     from unicode_utils import compound_unicode
     for dir in list_dir:
-        if os.path.exists(os.path.join(root_dir,dir,'origine.jpg')):
-            os.remove(os.path.join(root_dir,dir,'origine.jpg'))
-            print('remove file',os.path.join(root_dir,dir,'origine.jpg'))
+        # if os.path.exists(os.path.join(root_dir,dir,'origine.jpg')):
+        #     os.remove(os.path.join(root_dir,dir,'origine.jpg'))
+        #     print('remove file',os.path.join(root_dir,dir,'origine.jpg'))
         list_files = get_list_file_in_folder(os.path.join(root_dir, dir))
         #convert_json_to_multiple_gt(os.path.join(root_dir, dir))
         print('Dir ', dir, 'has', len(list_files), 'files')
@@ -100,13 +102,13 @@ def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, tra
             list_dir_txt.append(os.path.join(dir, file))
 
             #fix unicode
-            txt_file=os.path.join(root_dir,dir, file).replace('.jpg','.txt')
-            with open(txt_file, 'r', encoding='utf-8') as f:
-                txt= f.readlines()
-            if len(txt)>0:
-                new_text=compound_unicode(txt[0])
-                with open(txt_file, 'w', encoding='utf-8') as f:
-                    f.write(new_text)
+            # txt_file=os.path.join(root_dir,dir, file).replace('.jpg','.txt')
+            # with open(txt_file, 'r', encoding='utf-8') as f:
+            #     txt= f.readlines()
+            # if len(txt)>0:
+            #     new_text=compound_unicode(txt[0])
+            #     with open(txt_file, 'w', encoding='utf-8') as f:
+            #         f.write(new_text)
 
 
     random.shuffle(list_dir_txt)
@@ -200,17 +202,102 @@ def crop_collected_data2(dir, debug=False):
                 cv2.waitKey(0)
             cv2.imwrite(file_path, crop_img)
 
+def create_val_from_collected_data(src_dir, dst_dir):
+    list_dir=get_list_dir_in_folder(src_dir)
+    count=0
+    for idx, dir in enumerate(list_dir):
+        count+=1
+        print (count, dir)
+        if(idx<65):
+            continue
+        name1 = str(random.randint(1,24))
+        new_name1 = dir[-4:]+'_'+name1
+        src_file1=os.path.join(src_dir,dir,name1)
+        dst_file1=os.path.join(dst_dir,new_name1)
+        print('Move',src_file1)
+        print('To',dst_file1)
+        if os.path.exists(src_file1+'.jpg') and os.path.exists(os.path.exists(src_file1+'.txt')):
+            shutil.move(src_file1+'.jpg',dst_file1+'.jpg')
+            shutil.move(src_file1+'.txt',dst_file1+'.txt')
+
+        name2 = str(random.randint(1,24))
+        new_name2 = dir[-4:]+'_'+name2
+        src_file2=os.path.join(src_dir,dir,name2)
+        dst_file2=os.path.join(dst_dir,new_name2)
+        print('Move',src_file2)
+        print('To',dst_file2)
+        if os.path.exists(src_file2+'.jpg') and os.path.exists(os.path.exists(src_file2+'.txt')):
+            shutil.move(src_file2+'.jpg',dst_file2+'.jpg')
+            shutil.move(src_file2+'.txt',dst_file2+'.txt')
+
+def gen_blank_image(target_dir, num=150):
+    for i in range(num):
+        h=random.randint(32, 150)
+        w=random.randint(int(h/2),int(10*h))
+        print(i,w,h)
+
+        blank_img = np.zeros([h, w, 3], dtype=np.uint8)
+        blank_img.fill(255)
+        cv2.imwrite(os.path.join(target_dir,str(i)+'.jpg'),blank_img)
+        with open(os.path.join(target_dir,str(i)+'.txt'), 'w') as f:
+            f.write('')
 
 if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
-    #root_dir = '/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed'
-    #list_dir=get_list_dir_in_folder(root_dir)
-    #list_dir = sorted(list_dir)
-    #list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test','0825_DataSamples_dots', '0916_DataSamples_dots', '1015_Private Test_dots','0825_DataSamples_linedots', '0916_DataSamples_linedots', '1015_Private Test_linedots','0825_DataSamples_lines', '0916_DataSamples_lines', '1015_Private Test_lines']
-    #prepare_train_test_from_multiple_dir(root_dir, list_dir)
-    #prepare_txt_file('/home/duycuong/PycharmProjects/research_py3/text_recognition/EAST_argman/outputs/predict_handwriting_model.ckpt-45451/trang_new')
-    # prepare_train_from_icdar(icdar_dir, output_dir)
-    img_dir='/data/dataset/ocr_dataset/InkData_line_processed'
-    crop_collected_data2(img_dir)
+    final_list_dir=[]
+    root_dir = '/home/duycuong/PycharmProjects/dataset'
+
+    # data_dir='cleaned_data_merge_fixed/train'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+    #
+    # data_dir='cinnamon_data/train'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+    #
+    # final_list_dir.append('blank_images')
+    #
+    # data_dir='augment/add_dots'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+    #
+    # data_dir='augment/add_linedots'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+    #
+    # data_dir='augment/add_rotate'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+    #
+    # data_dir='augment/add_solid_line'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+    #
+    # data_dir='augment/add_solid_white_line'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+
+    final_list_dir.append('cinnamon_data/cinamon_test_115')
+
+    data_dir='cleaned_data_merge_fixed/AICR_test1'
+    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    for dir in list_dir:
+        final_list_dir.append(os.path.join(data_dir,dir))
+
+    final_list_dir.append('cleaned_data_merge_fixed/AICR_test2')
+
+    prepare_train_test_from_multiple_dir(root_dir, final_list_dir)
+    #img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
+    #crop_collected_data2(img_dir)
+    # gen_blank_image('/home/duycuong/PycharmProjects/dataset/blank_images')
+    # create_val_from_collected_data('/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed','/home/duycuong/PycharmProjects/dataset/AICR_test2')
     # for dir in list_dir:
     #     crop_collected_data(os.path.join(root_dir,dir))
+    kk=1
