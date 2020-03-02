@@ -195,22 +195,22 @@ def crop_collected_data2(dir, debug=False):
             extend_val=  int(ori_img.shape[0]/9)+1
             print ('count2',count2,'extend val',extend_val,'height',ori_img.shape[0])
             crop_img = ori_img[extend_val:ori_img.shape[0] - extend_val - 1, 0:ori_img.shape[1]]
+            if debug:
+                cv2.imshow('result', crop_img)
+                cv2.waitKey(0)
             cv2.imwrite(file_path, crop_img)
-        if debug:
-            cv2.imshow('result', ori_img)
-            cv2.waitKey(0)
 
 
 if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
-    root_dir = '/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed'
-    list_dir=get_list_dir_in_folder(root_dir)
-    list_dir = sorted(list_dir)
+    #root_dir = '/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed'
+    #list_dir=get_list_dir_in_folder(root_dir)
+    #list_dir = sorted(list_dir)
     #list_dir = ['0825_DataSamples', '0916_DataSamples', '1015_Private Test','0825_DataSamples_dots', '0916_DataSamples_dots', '1015_Private Test_dots','0825_DataSamples_linedots', '0916_DataSamples_linedots', '1015_Private Test_linedots','0825_DataSamples_lines', '0916_DataSamples_lines', '1015_Private Test_lines']
     #prepare_train_test_from_multiple_dir(root_dir, list_dir)
     #prepare_txt_file('/home/duycuong/PycharmProjects/research_py3/text_recognition/EAST_argman/outputs/predict_handwriting_model.ckpt-45451/trang_new')
     # prepare_train_from_icdar(icdar_dir, output_dir)
-    img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
+    img_dir='/data/dataset/ocr_dataset/InkData_line_processed'
     crop_collected_data2(img_dir)
     # for dir in list_dir:
     #     crop_collected_data(os.path.join(root_dir,dir))

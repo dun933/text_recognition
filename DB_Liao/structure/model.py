@@ -35,11 +35,13 @@ class SegDetectorModel(nn.Module):
         from decoders.seg_detector_loss import SegDetectorLossBuilder
 
         self.model = BasicModel(args)
-        # for loading models
-        self.model = parallelize(self.model, distributed, local_rank)
         self.criterion = SegDetectorLossBuilder(
             args['loss_class'], *args.get('loss_args', []), **args.get('loss_kwargs', {})).build()
-        self.criterion = parallelize(self.criterion, distributed, local_rank)
+        # for loading models
+        # if device.type !='cpu':
+        #     self.model = parallelize(self.model, distributed, local_rank)
+        #     self.criterion = parallelize(self.criterion, distributed, local_rank)
+        print('No paralell!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         self.device = device
         self.to(self.device)
 

@@ -3,7 +3,10 @@ import torch
 import os
 import torch.utils.data as data
 from PIL import Image
-from models.utils import resizePadding
+try:
+    from models.utils import resizePadding
+except ImportError:
+    from crnn_pbcquoc.models.utils import resizePadding
 
 def default_flist_reader(root, flist):
     imlist = []

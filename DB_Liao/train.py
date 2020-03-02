@@ -19,12 +19,14 @@ from concern.config import Configurable, Config
 from datetime import datetime
 #import cv2
 #cv2.setNumThreads(0)
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 config_file='config/aicr_ic15_resnet18.yaml'
 training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
 training_dir='outputs/train_'+training_time
 resume_ckpt='models/pre-trained-model-synthtext-resnet18'
-resume_ckpt='outputs/workspace/DB_Liao/outputs/train_2020-02-11_18-54/model/model_epoch_216_minibatch_135000'
+#resume_ckpt='outputs/workspace/DB_Liao/outputs/train_2020-02-11_18-54/model/model_epoch_216_minibatch_135000'
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
@@ -54,7 +56,7 @@ def main():
     parser.add_argument('--no-benchmark', action='store_false', dest='benchmark', help='Turn cudnn benchmark mode off')
     parser.add_argument('-d', '--distributed', action='store_true', dest='distributed', help='Use distributed training')
     parser.add_argument('--local_rank', dest='local_rank', default=0, type=int, help='Use distributed training')
-    parser.add_argument('-g', '--num_gpus', dest='num_gpus', default=1, type=int, help='The number of accessible gpus')
+    parser.add_argument('-gpu_num', '--num_gpus', dest='num_gpus', default=1, type=int, help='The number of accessible gpus')
     parser.set_defaults(debug = False)
     parser.set_defaults(benchmark = True)
 

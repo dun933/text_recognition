@@ -3,8 +3,12 @@ import os
 from PIL import Image
 import numpy as np
 import cv2
-import models.crnn as crnn
-import models.utils as utils
+try:
+    import models.crnn as crnn
+    import models.utils as utils
+except ImportError:
+    import crnn_pbcquoc.models.crnn as crnn
+    import crnn_pbcquoc.models.utils as utils
 import torch
 from torch.nn.functional import softmax
 from torch.autograd import Variable

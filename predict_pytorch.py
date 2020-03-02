@@ -15,11 +15,13 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-img_path = 'data/handwriting/IMG_3788.JPG'
-img_path = 'data/Cello/imgs/190715070317353_8479413342_pod.png'
+gpu= '1'
+gpu= None
+img_path = 'data/handwriting/IMG_3792.JPG'
+img_path = 'data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
 output_dir='outputs'
 #detector
-detector_model = 'model_epoch_115_minibatch_72000'
+detector_model = 'model_epoch_4_minibatch_3000'
 detector_box_thres = 0.315
 config_file = 'config/aicr_ic15_resnet18.yaml'
 ckpt_path = 'DB_Liao/outputs/' + detector_model
@@ -28,7 +30,7 @@ visualize = True
 img_short_side = 736  # 736
 
 # classifier
-classifier_ckpt_path = 'crnn_pbcquoc/outputs/train_2020-02-24_20-41_finetune_cinamon_input64_augmented/AICR_pretrained_48.pth'
+#classifier_ckpt_path = 'crnn_pbcquoc/outputs/train_2020-03-01_22-13_finetune_new_data2/AICR_finetune_new_data_44_loss_7.266_cer_0.028.pth'
 classifier_ckpt_path = 'models/AICR_CRNN_printing_11.pth'
 alphabet_path='config/char_229'
 classifier_width = 512
@@ -64,7 +66,7 @@ def main():
 
     # initialize
     begin_init = time.time()
-    detector, classifier = init_models(args, gpu='0')
+    detector, classifier = init_models(args, gpu=gpu)
     test_img = cv2.imread(img_path)
     end_init = time.time()
     print('Init models time:', end_init - begin_init, 'seconds')
@@ -97,7 +99,7 @@ def visualize_results(img, boxes_info, inch=40):
     plt.imshow(img, cmap='Greys_r')
 
     for box in boxes_info:
-        plt.text(box.xmin - 2, box.ymin - 4, box.value, fontsize=max(int(box.height), 12), fontdict={"color": 'r'})
+        plt.text(box.xmin - 2, box.ymin - 4, box.value, fontsize=max(int(box.height/2), 12), fontdict={"color": 'r'})
 
         ax.add_patch(patches.Rectangle((box.xmin, box.ymin), box.width, box.height,
                                        linewidth=2, edgecolor='green', facecolor='none'))
@@ -262,7 +264,7 @@ class Classifier_CRNN:
         with torch.no_grad():
             for i in range(max_iter):
                 data = val_iter.next()
-                cpu_images, cpu_texts = data
+                cpu_images, cpu_texts, _ = data
                 batch_size = cpu_images.size(0)
                 utils.loadData(self.image, cpu_images)
                 preds = self.model(self.image)

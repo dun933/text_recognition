@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Variable
 from models.utils import strLabelConverter
 import models.crnn as crnn
+import models.crnn128 as crnn128
 import time, os
 
 import cv2
@@ -21,8 +22,8 @@ gpu = config.gpu_test
 alphabet_path = config.alphabet_path
 workers = config.workers_test
 batch_size = config.batch_size_test
-label = False
-debug = True
+label = config.label
+debug = config.debug
 alphabet = open(alphabet_path).read().rstrip()
 nclass = len(alphabet) + 1
 nc = 3
@@ -31,10 +32,15 @@ inv_normalize = transforms.Normalize(
     std=[1 / 0.229, 1 / 0.224, 1 / 0.225])
 
 
+def get_list_dir_in_folder(dir):
+    sub_dir = [o for o in os.listdir(dir) if os.path.isdir(os.path.join(dir, o))]
+    return sub_dir
+
 def predict(dir, batch_sz, max_iter=10000):
     print('Init CRNN classifier')
     image = torch.FloatTensor(batch_sz, 3, imgH, imgH)
     model = crnn.CRNN2(imgH, nc, nclass, 256)
+    #model = crnn128.CRNN128(imgH, nc, nclass, 256)
     if gpu != None:
         print('Use GPU', gpu)
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu
@@ -79,8 +85,8 @@ def predict(dir, batch_sz, max_iter=10000):
             # print('    ', raw_pred)
             # print(' =>', sim_pred)
             print(sim_pred)
-            print(img_paths[0])
-            print(cpu_texts[0])
+            print(img_paths)
+            print(cpu_texts)
             if debug:
                 inv_tensor = inv_normalize(cpu_images[0])
                 cv_img = inv_tensor.permute(1, 2, 0).numpy()
@@ -94,4 +100,9 @@ def predict(dir, batch_sz, max_iter=10000):
 
 
 if __name__ == "__main__":
-    predict(img_dir, batch_size)
+    list_dir = get_list_dir_in_folder(img_dir)
+    if len(list_dir)>0:
+        for subdir in list_dir:
+            predict(os.path.join(img_dir, subdir), batch_size)
+    else:
+        predict(img_dir, batch_size)

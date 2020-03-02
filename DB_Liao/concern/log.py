@@ -10,7 +10,11 @@ import yaml
 import cv2
 import numpy as np
 
-from concern.config import Configurable, State
+try:
+    from concern.config import Configurable, State
+except ImportError:
+    from DB_Liao.concern.config import Configurable, State
+
 
 
 class Logger(Configurable):

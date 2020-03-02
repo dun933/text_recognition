@@ -1,7 +1,27 @@
 import sys
 import torch.nn as nn
 import torch
-from crnn import BidirectionalLSTM
+
+class BidirectionalLSTM(nn.Module):
+
+    def __init__(self, nIn, nHidden, nOut, dropout=0):
+        super(BidirectionalLSTM, self).__init__()
+
+        self.rnn = nn.LSTM(nIn, nHidden, bidirectional=True)
+        self.embedding = nn.Linear(nHidden * 2, nOut)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, input):
+        recurrent, _ = self.rnn(input)
+        recurrent = self.dropout(recurrent)
+        T, b, h = recurrent.size()
+        t_rec = recurrent.view(T * b, h)
+
+        output = self.embedding(t_rec)  # [T * b, nOut]
+        output = output.view(T, b, -1)
+
+        return output
+
 
 class CRNN128(nn.Module):
 

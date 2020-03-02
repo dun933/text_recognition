@@ -112,7 +112,6 @@ def recognize(model, converter, image, numpy_list, batch_sz, max_iter = 10000):
     #print('Speed:', num_files / processing_time, 'fps')
     return list_value
 
-
 def predict(list_img_path, batch_size = 16, post_processing=True,
             config_file= 'form/template_VIB_page1_demo.txt',
             address_db='symspellpy2/full_db.pickle',
@@ -123,7 +122,7 @@ def predict(list_img_path, batch_size = 16, post_processing=True,
     print('predict image:',list_img_path[0])
     begin_init = time.time()
     model, converter, image = init_models(batch_size)
-    name_db, address_db = init_post_processing(address_db, name_dict, name_bigram)
+    #name_db, address_db = init_post_processing(address_db, name_dict, name_bigram)
     end_init = time.time()
     print('Init time', end_init-begin_init,'seconds')
 
@@ -151,11 +150,11 @@ def predict(list_img_path, batch_size = 16, post_processing=True,
     print ('recognized name:',list_value[0])
     print ('recognized street:',list_value[4], 'ward:',list_value[5],'district:',list_value[6],'city:',list_value[7])
 
-    fixed_address = correct_address(db=address_db, street=list_value[4], ward=list_value[5], district=list_value[6], city=list_value[7])
-    fixed_name = correct_name(name_db, list_value[0])
+    #fixed_address = correct_address(db=address_db, street=list_value[4], ward=list_value[5], district=list_value[6], city=list_value[7])
+    #fixed_name = correct_name(name_db, list_value[0])
 
-    print ('fixed name:',fixed_name)
-    print ('fixed address:',fixed_address)
+    #print ('fixed name:',fixed_name)
+    #print ('fixed address:',fixed_address)
 
     end_predict = time.time()
     print('Recognize time', end_predict - end_extract, 'seconds')
@@ -166,6 +165,6 @@ if __name__== "__main__":
     for idx in range(len(imgs)):
         imgs[idx]=os.path.join(img_dir,imgs[idx])
 
-    img_path='/data/data_imageVIB/vib_page1/vib_page1-23.jpg'
+    img_path='/data/data_imageVIB/vib_page1/vib_page1-22.jpg'
     predict([img_path], batch_size=batch_size)
 

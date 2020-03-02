@@ -17,6 +17,7 @@ from multiprocessing import cpu_count
 from tqdm import tqdm
 from torchsummary import summary
 import models.crnn as crnn
+import models.crnn128 as crnn128
 from datetime import datetime
 import config
 from torchvision import transforms
@@ -104,7 +105,7 @@ val_loader = torch.utils.data.DataLoader(
             val_dataset,
             batch_size=batch_size,
             num_workers=opt.workers,
-            shuffle=False,
+            shuffle=True,
             collate_fn=alignCollate(opt.imgW, opt.imgH)
         )
 
@@ -117,6 +118,7 @@ converter = utils.strLabelConverter(alphabet, ignore_case=False)
 criterion = CTCLoss()
 
 crnn = crnn.CRNN2(opt.imgH, num_channel, nclass, opt.nh)
+#crnn = crnn128.CRNN128(opt.imgH, num_channel, nclass, opt.nh)
 if opt.pretrained != '':
     print('loading pretrained model from %s' % opt.pretrained)
     pretrain = torch.load(opt.pretrained)
