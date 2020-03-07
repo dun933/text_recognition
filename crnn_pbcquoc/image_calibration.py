@@ -5,7 +5,6 @@ import time
 
 template_dir='template'
 template_imgs=['field1.jpg','field3.jpg','field4.jpg']
-#template_imgs=['field1_0.5.jpg','field3_0.5.jpg','field4_0.5.jpg']
 
 
 origin_img=os.path.join(template_dir,'0001_ori.jpg')
@@ -59,13 +58,14 @@ def crop_image(input_img, bbox=[905,1010,1300,138]):
     crop_img = input_img[bbox[1]+offset_y:bbox[1] + bbox[3]+offset_y, bbox[0]+offset_x:bbox[0] + bbox[2]+offset_x]
     return crop_img
 
-def background_subtract(image):
-    bgr_path='C:/Users/nd.cuong1/Downloads/Template_Matching-master/data/test_tm/field1.jpg'
-    background=cv2.imread(bgr_path, 0)
+def background_subtract(image, bgr_path='C:/Users/nd.cuong1/Downloads/Template_Matching-master/data/test_tm/field1.jpg'):
+    #image=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #background=cv2.imread(bgr_path, 0)
+    background=cv2.imread(bgr_path)
     result = cv2.subtract(background, image)
     result_inv = cv2.bitwise_not(result)
-    #cv2.imshow('result',result_inv)
-    #cv2.waitKey(0)
+    cv2.imshow('result',result_inv)
+    cv2.waitKey(0)
     return result_inv
 
 

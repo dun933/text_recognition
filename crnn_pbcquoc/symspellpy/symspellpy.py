@@ -2,17 +2,19 @@
 .. module:: symspellpy
    :synopsis: Module for Symmetric Delete spelling correction algorithm.
 """
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from enum import Enum
 import gzip
 from itertools import cycle
 import math
 import os.path
 import pickle
+import re
 import sys
 from difflib import SequenceMatcher
-from symspellpy2.editdistance import DistanceAlgorithm, EditDistance
-from symspellpy2 import helpers as helpers
+from .edit_distance import DistanceAlgorithm, edit_distance
+from . import helpers as helpers
+import collections
 import re
 
 
@@ -26,7 +28,7 @@ class Verbosity(Enum):
     """
     TOP = 0  #: Top suggestion with the highest term frequency of the suggestions of smallest edit distance found.
     CLOSEST = 1  #: All suggestions of smallest edit distance found, suggestions ordered by term frequency.
-    ALL = 2  #: All suggestions within maxEditDistance, suggestions ordered by edit distance, then by term frequency (slower, no early termination).
+    ALL = 2  #: All suggestions within maxedit_distance, suggestions ordered by edit distance, then by term frequency (slower, no early termination).
 
 
 class SymSpell(object):
@@ -67,7 +69,7 @@ class SymSpell(object):
         A threshold may be specified, when a term occurs so frequently
         in the corpus that it is considered a valid word for spelling
         correction.
-    _distance_algorithm : :class:`.editdistance.DistanceAlgorithm`
+    _distance_algorithm : :class:`.edit_distance.DistanceAlgorithm`
         Edit distance algorithms
     _max_length : int
         Length of longest word in the dictionary.
@@ -113,8 +115,8 @@ class SymSpell(object):
         self._max_dictionary_edit_distance = max_dictionary_edit_distance
         self._prefix_length = prefix_length
         self._count_threshold = count_threshold
-        self._distance_algorithm = DistanceAlgorithm.DAMERUAUOSA
-        self._max_length = 0
+        self._distance_algorithm = DistanceAlgorithm.LEVENSHTEIN
+        self._max_length = 20
         self._replaced_words = dict()
 
     def create_dictionary_entry(self, key, count):
@@ -551,7 +553,7 @@ class SymSpell(object):
         else:
             candidates.append(phrase)
         # print(candidates)
-        distance_comparer = EditDistance(self._distance_algorithm)
+        distance_comparer = edit_distance(self._distance_algorithm)
         # for lis in self._deletes:
         #     if similar(lis, 'nội'):
         #         print('dhkalsjhdlashd',lis,  similar(lis, 'nội'))
@@ -638,7 +640,7 @@ class SymSpell(object):
                             continue
                     # number of edits in prefix ==maxediddistance AND
                     # no identical suffix, then
-                    # editdistance>max_edit_distance and no need for
+                    # edit_distance>max_edit_distance and no need for
                     # Levenshtein calculation
                     # (phraseLen >= prefixLength) &&
                     # (suggestionLen >= prefixLength)
@@ -786,7 +788,7 @@ class SymSpell(object):
             term_list_2 = helpers.parse_words(phrase, True)
         suggestions = list()
         suggestion_parts = list()
-        distance_comparer = EditDistance(self._distance_algorithm)
+        distance_comparer = edit_distance(self._distance_algorithm)
 
         # translate every item to its best suggestion, otherwise it
         # remains unchanged

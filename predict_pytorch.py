@@ -15,27 +15,31 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-gpu= '1'
-gpu= None
-img_path = 'data/handwriting/IMG_3792.JPG'
-img_path = 'data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
+gpu= '0'
+#gpu= None
+img_path = 'data/CMND/2.jpg'
+#img_path = '/home/aicr/cuongnd/text_recognition/data/handwriting/IMG_3794.JPG'
+img_path = '/data/data_imageVIB/vib_page1/vib_page1-01.jpg'
 output_dir='outputs'
 #detector
-detector_model = 'model_epoch_4_minibatch_3000'
+detector_model = 'model_epoch_38_minibatch_114000'
 detector_box_thres = 0.315
 config_file = 'config/aicr_ic15_resnet18.yaml'
 ckpt_path = 'DB_Liao/outputs/' + detector_model
-polygon = False
+polygon = True
 visualize = True
 img_short_side = 736  # 736
 
 # classifier
-#classifier_ckpt_path = 'crnn_pbcquoc/outputs/train_2020-03-01_22-13_finetune_new_data2/AICR_finetune_new_data_44_loss_7.266_cer_0.028.pth'
 classifier_ckpt_path = 'models/AICR_CRNN_printing_11.pth'
-alphabet_path='config/char_229'
-classifier_width = 512
+classifier_width = 128
 classifier_height = 32
+alphabet_path='config/char_229'
+if classifier_height == 64:
+    classifier_ckpt_path = 'crnn_pbcquoc/outputs/train_2020-03-01_22-13_finetune_new_data2/AICR_finetune_new_data_44_loss_7.266_cer_0.028.pth'
+    alphabet_path='config/char_246'
 classifier_batch_sz = 16
+draw_text=True
 debug = False
 if debug:
     classifier_batch_sz = 1
@@ -86,26 +90,26 @@ def main():
 
     for idx, box in enumerate(boxes_info):
         box.asign_value(values[idx])
-    visualize_results(test_img,boxes_info)
+    visualize_results(test_img,boxes_info, draw_text)
     end_visualize = time.time()
     print('Visualize time:', end_visualize - end_classifier, 'seconds')
     print('Done')
 
 
-def visualize_results(img, boxes_info, inch=40):
+def visualize_results(img, boxes_info, text=False, inch=40):
     fig, ax = plt.subplots(1)
     fig.set_size_inches(inch, inch)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     plt.imshow(img, cmap='Greys_r')
 
     for box in boxes_info:
-        plt.text(box.xmin - 2, box.ymin - 4, box.value, fontsize=max(int(box.height/2), 12), fontdict={"color": 'r'})
+        if text:
+            plt.text(box.xmin - 2, box.ymin - 4, box.value, fontsize=max(int(box.height/4), 12), fontdict={"color": 'r'})
 
         ax.add_patch(patches.Rectangle((box.xmin, box.ymin), box.width, box.height,
                                        linewidth=2, edgecolor='green', facecolor='none'))
 
-    # plt.show()
-
+    #plt.show()
     save_img_path = os.path.join(output_dir, img_path.split('/')[-1].split('.')[0] + '_visualized.jpg')
     print('Save image to', save_img_path)
     fig.savefig(save_img_path, bbox_inches='tight')
@@ -231,7 +235,10 @@ class Classifier_CRNN:
         self.image = torch.FloatTensor(batch_sz, 3, imgH, imgH)
         self.text = torch.IntTensor(batch_sz * 5)
         self.length = torch.IntTensor(batch_sz)
-        self.model = crnn.CRNN(imgH, num_channel, nclass, 256)
+        if classifier_height ==32:
+            self.model = crnn.CRNN(imgH, num_channel, nclass, 256)
+        else:
+            self.model = crnn.CRNN2(imgH, num_channel, nclass, 256)
         if gpu != None and torch.cuda.is_available():
             self.model = self.model.cuda()
             self.image = self.image.cuda()
@@ -287,7 +294,6 @@ class Classifier_CRNN:
         # print('Speed:', num_files / processing_time, 'fps')
         return values
 
-
 def crop_from_img_rectangle(img, left, top, right, bottom):
     extend_y = max(int((bottom - top) / 3), 4)
     extend_x = int(extend_y / 2)
@@ -298,7 +304,6 @@ def crop_from_img_rectangle(img, left, top, right, bottom):
     if left >= right or top >= bottom or left < 0 or right < 0 or left >= img.shape[1] or right >= img.shape[1]:
         return True, None
     return False, img[top:bottom, left:right]
-
 
 def get_boxes_data(img, boxes):
     boxes_data = []

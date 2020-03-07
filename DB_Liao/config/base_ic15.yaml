@@ -28,7 +28,7 @@ define:
   - name: validate_data
     class: ImageDataset
     data_dir:
-        - 'datasets/Eval_corpus/'
+        - 'datasets/Eval_corpus'
     data_list:
         - 'datasets/Eval_corpus/test_list.txt'
     processes:

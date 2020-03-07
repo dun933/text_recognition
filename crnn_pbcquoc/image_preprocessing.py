@@ -218,8 +218,8 @@ def auto_rotation(img, expand_angle=5):
     return img_cp
 
 
-def crop_image(img, x1, y1, x2, y2):
-    return img[y1:y2, x1:x2]
+def crop_image(img, x1, y1, x2, y2, offsetx=0, offsety=0):
+    return img[y1+offsety:y2+offsety, x1+offsetx:x2+offsetx]
 
 
 def update_database_template(temp, list_box_info, name_temp, path_config_file=''):
@@ -391,7 +391,17 @@ def view_boxes(path_config_file):
     cv2.imshow('result',img_res)
     cv2.waitKey(0)
 
-def extract_for_demo(listimg, path_config_file, save_path=None, eraseline=True):
+def background_subtract(image, bgr_path='C:/Users/nd.cuong1/Downloads/Template_Matching-master/data/test_tm/field1.jpg'):
+    #image=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #background=cv2.imread(bgr_path, 0)
+    background=cv2.imread(bgr_path)
+    result = cv2.subtract(background, image)
+    result_inv = cv2.bitwise_not(result)
+    #cv2.imshow('result',result_inv)
+    #cv2.waitKey(0)
+    return result_inv
+
+def extract_for_demo(listimg, path_config_file, save_path=None, eraseline=False, subtract_bgr=True):
     pred_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
     if save_path is not None:
         result_save_dir = os.path.join(save_path, pred_time)
@@ -417,8 +427,10 @@ def extract_for_demo(listimg, path_config_file, save_path=None, eraseline=True):
                     template.width = int(list_inf[1])
     count_img = 0
     list_class_img_info = []
+    font = cv2.FONT_HERSHEY_SIMPLEX
     for img in listimg:
         img_bl = img
+        img_save_bl = img_bl.copy()
         h_n = img_bl.shape[0]
         w_n = img_bl.shape[1]
         ratioy = h_n / template.height
@@ -433,10 +445,15 @@ def extract_for_demo(listimg, path_config_file, save_path=None, eraseline=True):
             by = int(if_box[3] * ratioy)
             ex = int(if_box[4] * ratiox)
             ey = int(if_box[5] * ratioy)
+            cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
+            cv2.putText(img_save_bl, if_box[1], (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
             classimginf.location = [bx,by,ex,ey]
-            info_img = crop_image(img_bl, bx, by, ex, ey)
+            info_img = crop_image(img_bl, bx, by, ex, ey, offsety=1, offsetx=1)
+            #cv2.imwrite('form/'+if_box[0]+'.jpg',info_img)
+            if subtract_bgr:
+                info_img = background_subtract(info_img, bgr_path='form/'+if_box[0]+'.jpg')
             if eraseline == True:
-                rs = removeLines(info_img,expand_bb=3,pixel_erase=2)
+                rs = removeLines(info_img, expand_bb=3, pixel_erase=2)
                 if rs is not None:
                     info_img = rs
             if save_path is not None:
@@ -444,6 +461,7 @@ def extract_for_demo(listimg, path_config_file, save_path=None, eraseline=True):
                 cv2.imwrite(save_path_img, info_img)
             classimginf.data = info_img
             list_class_img_info.append(classimginf)
+        cv2.imwrite("/data/data_imageVIB/result.jpg",img_save_bl)
     return list_class_img_info
 
 

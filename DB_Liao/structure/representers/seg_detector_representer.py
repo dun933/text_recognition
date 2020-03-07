@@ -75,7 +75,7 @@ class SegDetectorRepresenter(Configurable):
         boxes = []
         scores = []
 
-        (_,contours, _) = cv2.findContours(
+        (contours,_) = cv2.findContours(
             (bitmap*255).astype(np.uint8),
             cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 

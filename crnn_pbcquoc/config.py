@@ -16,7 +16,7 @@ ckpt_prefix = 'AICR_finetune_new_data_128'
 
 #test
 test_dir='/home/aicr/cuongnd/text_recognition/data/handwriting/hokhau'
-test_dir='/data/train_data_29k_29Feb/cleaned_data_merge_fixed/AICR_test2'
+test_dir='/data/train_data_29k_29Feb/cinnamon_data/cinamon_test_115'
 #pretrained_test='outputs/train_2020-02-20_09-03_finetune_cinamon_input32/AICR_pretrained_59.pth'  #appr 1
 #pretrained_test='outputs/train_2020-02-20_16-58_train_cinamon_data/AICR_pretrained_74.pth'  #appr 2
 #pretrained_test='outputs/train_2020-02-23_16-21_finetune_cinamon_input64/AICR_pretrained_53.pth'  #appr 3
@@ -27,9 +27,9 @@ label = True
 test_list=''
 
 gpu_test = '1'
-gpu_test = None
+#gpu_test = None
 workers_test=16
-batch_size_test= 16
+batch_size_test= 1
 debug = False
 if debug:
     batch_size_test=1

@@ -1,12 +1,12 @@
 """
-.. module:: editdistance
+.. module:: edit_distance
    :synopsis: Module for edit distance algorithms.
 """
 from enum import Enum
 
 import numpy as np
 
-from symspellpy2 import helpers as helpers
+from . import helpers as helpers
 
 
 class DistanceAlgorithm(Enum):
@@ -15,7 +15,7 @@ class DistanceAlgorithm(Enum):
     DAMERUAUOSA = 1  #: Damerau optimal string alignment algorithm
 
 
-class EditDistance(object):
+class edit_distance(object):
     """Edit distance algorithms.
 
     Parameters

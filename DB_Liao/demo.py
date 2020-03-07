@@ -8,11 +8,12 @@ from concern.config import Configurable, Config
 import math, time
 
 exp='config/aicr_ic15_resnet18.yaml'
-img_path='../data/handwriting/trang.jpg'
-img_path= '../data/Eval/imgs/SCAN_20191128_145142994_002.jpg'
-detector_model = 'model_epoch_115_minibatch_72000'
+img_path='/data/data_imageVIB/vib_page1/vib_page1-01.jpg'
+img_path= '../data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
+img_path= '../data/Cello/imgs/190715070317353_8479413342_pod.png'
+detector_model = 'model_epoch_93_minibatch_138000_4Mar'
 ckpt_path='outputs/'+detector_model
-polygon=False
+polygon=True
 visualize=True
 img_short_side=736 #736 1200
 

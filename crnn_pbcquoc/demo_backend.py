@@ -3,6 +3,7 @@ from torch.autograd import Variable
 from models.utils import strLabelConverter
 import models.crnn as crnn
 import time, os
+import pickle
 
 import cv2
 from loader import alignCollate, NumpyListLoader
@@ -11,21 +12,21 @@ import config
 from torchvision import transforms
 from image_preprocessing import extract_for_demo
 from image_calibration import calib_image
-from symspellpy2.address_spell_check import load_address_correction, correct_address
-from symspellpy2.name_spell_check import load_name_corection, correct_name
+from symspellpy.address_spell_check import correct_address
+from symspellpy.name_spell_check import load_name_corection, correct_name
 
-img_dir = '/home/duycuong/PycharmProjects/dataset/data_imageVIB/vib_page1'
+img_dir = '/data/data_imageVIB/vib_page1'
 test_list=config.test_list
 pretrained = config.pretrained_test
 imgW = config.imgW
 imgH = config.imgH
-gpu = config.gpu_test
+gpu = None#config.gpu_test
 alphabet_path = config.alphabet_path
 workers = 4
 batch_size = 8
 
 label = config.label
-debug = True
+debug = False
 if debug:
     batch_size = 1
 alphabet = open(alphabet_path).read().rstrip()
@@ -60,10 +61,23 @@ def init_models(batch_sz):
     model.eval()
     return model, converter, image
 
+def correct_capital(raw, fixed):
+    fixed = fixed.replace('_', ' ')
+    if raw.islower():
+        fixed = fixed.lower()
+    elif raw.isupper():
+        fixed = fixed.upper()
+    else:
+        fixed = fixed.split(' ')
+        fixed = [word.capitalize() for word in fixed]
+        fixed = ' '.join(fixed)
+    return fixed
+
 def init_post_processing(address_db_path, name_db, name_bigram):
-    address_db = load_address_correction(address_db_path)
+    with open(address_db_path, 'rb') as handle:
+        address_db = pickle.load(handle)
     name_db = load_name_corection(name_db, name_bigram)
-    return name_db, address_db
+    return address_db, name_db
 
 def recognize(model, converter, image, numpy_list, batch_sz, max_iter = 10000):
     list_value=[]
@@ -114,15 +128,16 @@ def recognize(model, converter, image, numpy_list, batch_sz, max_iter = 10000):
 
 def predict(list_img_path, batch_size = 16, post_processing=True,
             config_file= 'form/template_VIB_page1_demo.txt',
-            address_db='symspellpy2/full_db.pickle',
-            name_dict= "symspellpy2/freq_name_dic.txt",
-            name_bigram= "symspellpy2/freq_name_bigram.txt"):
+            address_db_path='symspellpy/db.pickle',
+            address_csv_path='symspellpy/dvhcvn.csv',
+            name_dict= "symspellpy/freq_name_dic.txt",
+            name_bigram= "symspellpy/freq_name_bigram.txt"):
     if(len(list_img_path)>1):
         print('Please use 1 image only')
     print('predict image:',list_img_path[0])
     begin_init = time.time()
     model, converter, image = init_models(batch_size)
-    #name_db, address_db = init_post_processing(address_db, name_dict, name_bigram)
+    address_db, name_db = init_post_processing(address_db_path, name_dict, name_bigram)
     end_init = time.time()
     print('Init time', end_init-begin_init,'seconds')
 
@@ -134,7 +149,8 @@ def predict(list_img_path, batch_size = 16, post_processing=True,
 
     end_transform = time.time()
     print('Get data time', end_transform - end_init, 'seconds')
-    list_obj = extract_for_demo(img_list, path_config_file=config_file, eraseline=False)
+    list_obj = extract_for_demo(img_list, path_config_file=config_file, eraseline=False, subtract_bgr=True)
+
 
     pred_output=dict()
     numpy_data = []
@@ -145,19 +161,38 @@ def predict(list_img_path, batch_size = 16, post_processing=True,
     end_extract = time.time()
     print('Extract data time', end_extract - end_transform, 'seconds')
     list_value = recognize(model, converter, image, numpy_data, batch_size)
-    print(list_value)
+    #print(list_value)
 
     print ('recognized name:',list_value[0])
-    print ('recognized street:',list_value[4], 'ward:',list_value[5],'district:',list_value[6],'city:',list_value[7])
-
-    #fixed_address = correct_address(db=address_db, street=list_value[4], ward=list_value[5], district=list_value[6], city=list_value[7])
-    #fixed_name = correct_name(name_db, list_value[0])
-
-    #print ('fixed name:',fixed_name)
-    #print ('fixed address:',fixed_address)
-
+    print ('recognized city:',list_value[7] ,'district:',list_value[6], 'ward:',list_value[5],'street:', list_value[4])
     end_predict = time.time()
     print('Recognize time', end_predict - end_extract, 'seconds')
+
+    if post_processing:
+        fixed_address = correct_address(db=address_db, csv_file=address_csv_path, street=list_value[4], ward=list_value[5],
+                                        district=list_value[6], city=list_value[7])
+        fixed_name = correct_name(name_db, list_value[0])
+
+
+
+        print('\nfixed name:', fixed_name[0])
+        print('fixed address:', fixed_address)
+
+    end_spell_checking = time.time()
+    print('Spell checking time', end_spell_checking - end_predict, 'seconds')
+
+    outputs= dict()
+    outputs['NAME']=list_value[0]
+    outputs['BIRTHDAY']=list_value[1]
+    outputs['NATION']=list_value[2]
+    outputs['NOHOME1']=list_value[3]
+    outputs['STREETHOME1']=list_value[4]
+    outputs['WARDHOME1']=list_value[5]
+    outputs['DISTRICTHOME1']=list_value[6]
+    outputs['CITYHOME1']=list_value[7]
+    outputs['PHONENUMBER']=list_value[8]
+    return outputs
+
 
 if __name__== "__main__":
     img_list = []
@@ -165,6 +200,7 @@ if __name__== "__main__":
     for idx in range(len(imgs)):
         imgs[idx]=os.path.join(img_dir,imgs[idx])
 
-    img_path='/home/duycuong/PycharmProjects/dataset/data_imageVIB/vib_page1/vib_page1-19.jpg'
+    img_path='/data/data_imageVIB/vib_page1/vib_page1-28.jpg'
+    #img_path='/data/data_imageVIB/vib_page1/0001_ori.jpg'
     predict([img_path], batch_size=batch_size)
 
