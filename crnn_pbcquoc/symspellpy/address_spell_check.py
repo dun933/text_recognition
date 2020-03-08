@@ -5,6 +5,8 @@ import os, json, pickle, re
 import pandas
 import collections
 
+from . import correct_capital
+
 
 s1 = u'ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠạẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặẸẹẺẻẼẽẾếỀềỂểỄễỆệỈỉỊịỌọỎỏỐốỒồỔổỖỗỘộỚớỜờỞởỠỡỢợỤụỦủỨứỪừỬửỮữỰựỲỳỴỵỶỷỸỹ'
 s0 = u'AAAAEEEIIOOOOUUYaaaaeeeiioooouuyAaDdIiUuOoUuAaAaAaAaAaAaAaAaAaAaAaAaEeEeEeEeEeEeEeEeIiIiOoOoOoOoOoOoOoOoOoOoOoOoUuUuUuUuUuUuUuYyYyYyYy'
@@ -303,193 +305,6 @@ def load_address_correction(db_file, db_out):
 
 #     return output
 
-# def correct_address(db, csv_file, street=None, ward=None, district=None, city=None, max_edit_distance=5):
-#     def city_non_pre(city_fixed):
-#         city_fixed = city_fixed.lower()
-#         patterns_tp = ['thành phố', 'tp', 'tphố', 'tỉnh']
-#         for pattern in patterns_tp:
-#             group = re.search(pattern, city_fixed)
-#             if group is not None:
-#                 city_fixed = city_fixed.replace(group.group(), '').lstrip()
-#         return city_fixed.replace(' ', '_')
-#     def district_non_pre(district_fixed):
-#         district_fixed = district_fixed.lower()
-#         patterns_tp = ['quận', 'huyện', 'tphố', 'thành phố', 'tp', 'tt', 'thị trấn', 'thị xã', 'tx']
-#         for pattern in patterns_tp:
-#             group = re.search(pattern, district_fixed)
-#             if group is not None:
-#                 district_fixed = district_fixed.replace(group.group(), '').lstrip()
-#         return district_fixed.replace(' ', '_')
-#     def ward_non_pre(ward_fixed):
-#         ward_fixed = ward_fixed.lower()
-#         patterns_tp = ['phường', 'xã', 'phố', 'thị trấn', 'tt', 'thị xã', 'tx']
-#         for pattern in patterns_tp:
-#             group = re.search(pattern, ward_fixed)
-#             if group is not None:
-#                 ward_fixed = ward_fixed.replace(group.group(), '').lstrip()
-#         return ward_fixed.replace(' ', '_')
-#     def street_non_pre(street_fixed):
-#         street_fixed = street_fixed.lower()
-#         patterns_tp = ['số', 'đường', 'nhà', 'phố', 'street', 'thôn']
-#         for pattern in patterns_tp:
-#             group = re.search(pattern, street_fixed)
-#             if group is not None:
-#                 print(group.group())
-#                 street_fixed = street_fixed.replace(group.group(), '').lstrip()
-#         return street_fixed.replace(' ', '_')
-#     output = {}
-#     output['city_fixed'] = None
-#     output['district_fixed'] = None
-#     output['ward_fixed'] = None
-#     output['street_fixed'] = None
-
-#     data_df = pandas.read_csv(csv_file)
-#     data_df = data_df.drop('Mã TP', 1)
-#     data_df = data_df.drop('Mã QH', 1)
-#     data_df = data_df.drop('Mã PX', 1)
-#     data_df = data_df.drop('Cấp', 1)
-#     data_df = data_df.astype(str).apply(lambda x: x.str.lower())
-#     data_df = data_df.astype(str).apply(lambda x: x.str.replace(' ', '_'))
-#     # print(data_df)
-#     if city:
-#         city = city_non_pre(city)
-#         if city in data_df['Tỉnh Thành Phố'].values:
-#             output['city_fixed'] = city
-#         else:
-#             city_suggestions = db['province_correct'].lookup_compound(city, max_edit_distance=max_edit_distance)
-#             for city_suggestion in city_suggestions:
-#                 city_fixed = city_suggestion._term
-#                 print(city_fixed)
-#                 # if '_' in city_fixed:
-#                 #     city_fixed = ' '.join(list(city_fixed.split('_')))
-#                 if city_fixed in data_df['Tỉnh Thành Phố'].values:
-#                     output['city_fixed'] = city_fixed
-
-#     if district:
-#         district = district_non_pre(district)
-#         # print(district)
-#         if output['city_fixed']:
-#             df_city = data_df.loc[data_df['Tỉnh Thành Phố'].isin([output['city_fixed']])]
-            
-#             if district in df_city['Quận Huyện'].values:
-#                 output['district_fixed'] = district
-
-#             else:
-#                 city_fixed_t = output['city_fixed'].replace(' ','_')
-#                 district_suggestions = db['provinces'][city_fixed_t]['district_correct'].lookup_compound(district,
-#                                                                                                    max_edit_distance=max_edit_distance)
-#                 for district_suggestion in district_suggestions:
-#                     district_fixed = district_suggestion._term
-#                     # if '_' in district_fixed:
-#                     #     district_fixed = ' '.join(list(district_fixed.split('_')))
-#                     if district_fixed in df_city['Quận Huyện'].values:
-#                         output['district_fixed'] = district_fixed
-#         else:
-#             if district in data_df['Quận Huyện'].values:
-#                 df_district = data_df.loc[data_df['Quận Huyện'].isin([district])]
-#                 list_city = df_district['Tỉnh Thành Phố'].unique()
-#                 output['city_fixed'] = list_city[0]
-#                 output['district_fixed'] = district
-#             else:
-#                 district_suggestions = db['district_correct'].lookup_compound(district,max_edit_distance=max_edit_distance)
-#                 for district_suggestion in district_suggestions:
-#                     district_fixed = district_suggestion._term
-#                     print(district_fixed)
-#                     # if '_' in district_fixed:
-#                     #     district_fixed = ' '.join(list(district_fixed.split('_')))
-#                     if district_fixed in data_df['Quận Huyện'].values:
-#                         output['district_fixed'] = district_fixed
-#                         df_district = data_df.loc[data_df['Quận Huyện'].isin([district_fixed])]
-#                         list_city = df_district['Tỉnh Thành Phố'].unique()
-#                         output['city_fixed'] = list_city[0]
-#     if ward:
-#         ward = ward_non_pre(ward)
-#         if output['city_fixed'] and output['district_fixed']:
-#             df_city = data_df.loc[data_df['Tỉnh Thành Phố'].isin([output['city_fixed']])]
-#             df_district = df_city.loc[df_city['Quận Huyện'].isin([output['district_fixed']])]
-#             # print(df_district)
-#             if ward in df_district['Phường Xã'].values:
-#                 output['ward_fixed'] = ward
-#             else:
-#                 city_fixed_t = output['city_fixed'].replace(' ','_')
-#                 district_fixed_t = output['district_fixed'].replace(' ','_')
-#                 # print(ward)
-#                 ward_suggestions = db['provinces'][city_fixed_t]['districts'][district_fixed_t][
-#                             'ward_correct'].lookup_compound(ward,
-#                                                             max_edit_distance=max_edit_distance)
-#                 for ward_suggestion in ward_suggestions:
-#                     ward_fixed = ward_suggestion._term
-#                     # print(ward_fixed)
-#                     if ward_fixed in df_district['Phường Xã'].values:
-#                         output['ward_fixed'] = ward_fixed
-#                 if output['ward_fixed'] == None:
-#                     ward_suggestions_ = db['provinces'][city_fixed_t]['districts'][district_fixed_t][
-#                                 'ward_correct'].lookup(ward,verbosity=0,
-#                                                                 max_edit_distance=max_edit_distance)
-#                     for ward_suggestion in ward_suggestions_:
-#                         ward_fixed = ward_suggestion._term
-#                         # print(ward_fixed)
-#                         if ward_fixed in df_district['Phường Xã'].values:
-#                             output['ward_fixed'] = ward_fixed
-#         elif output['city_fixed'] and output['district_fixed']==None:
-#             df_city = data_df.loc[data_df['Tỉnh Thành Phố'].isin([output['city_fixed']])]
-            
-#             if ward in df_city['Phường Xã'].values:
-#                 output['ward_fixed'] = ward
-#             else:
-#                 city_fixed_t = output['city_fixed'].replace(' ','_')
-#                 # district_fixed_t = output['district_fixed'].replace(' ','_')
-#                 # print(ward)
-#                 list_ward = df_city['Phường Xã'].unique()
-#                 # print(list_ward)
-#                 ward_correct = load_big_engine(list_ward)
-#                 # ward_suggestions = db['provinces'][city_fixed_t]['districts'][district_fixed_t][
-#                 #             'ward_correct'].lookup_compound(ward, max_edit_distance=max_edit_distance)
-#                 ward_suggestions = ward_correct.lookup_compound(ward,max_edit_distance=max_edit_distance)
-#                 for ward_suggestion in ward_suggestions:
-#                     ward_fixed = ward_suggestion._term
-#                     # print(ward_fixed)
-#                     # if '_' in ward_fixed:
-#                     #     ward_fixed = ' '.join(list(ward_fixed.split('_')))
-#                     if ward_fixed in df_city['Phường Xã'].values:
-#                         output['ward_fixed'] = ward_fixed
-#                         df_district = df_city.loc[df_city['Phường Xã'].isin([ward_fixed])]
-#                         list_district = df_district['Quận Huyện'].unique()
-#                         output['district_fixed'] = list_district[0]
-#         elif output['city_fixed']==None and output['district_fixed']:
-#             df_district = data_df.loc[data_df['Quận Huyện'].isin([output['district_fixed']])]
-#             # print(df_district)
-#             if ward in df_district['Phường Xã'].values:
-#                 output['ward_fixed'] = ward
-#                 df_district = df_district.loc[df_district['Phường Xã'].isin([ward])]
-#                 list_district = df_district['Quận Huyện'].unique()
-#                 output['district_fixed'] = list_district[0]
-#     if street:
-#         street = street_non_pre(street)
-#         # print(street)
-#         if output['city_fixed'] and output['district_fixed']:
-#             city_fixed_t = output['city_fixed'].replace(' ','_')
-#             district_fixed_t = output['district_fixed'].replace(' ','_')
-#             corpus_street = db['provinces'][city_fixed_t]['districts'][district_fixed_t]['corpus_street']
-#             # print(corpus_street)
-#             if street in corpus_street:
-#                 output['street_fixed'] = street
-#             else:
-#                 # print(street)
-#                 street_suggestions = db['provinces'][city_fixed_t]['districts'][district_fixed_t][
-#                             'streets_correct'].lookup(street,max_edit_distance=max_edit_distance,verbosity=0)
-#                 # for street_suggestion in street_suggestions:
-
-#                 # print(street_suggestion)
-#                 if len(street_suggestions)>0:
-#                     street_fixed = street_suggestions[0]._term
-#                     # if '_' in street_fixed:
-#                     #     street_fixed = ' '.join(list(street_fixed.split('_')))
-#                     if street_fixed in corpus_street:
-#                         output['street_fixed'] = street_fixed
-    
-
-#     return output
 def correct_address(db, csv_file, street=None, ward=None, district=None, city=None, max_edit_distance=5):
     def city_non_pre(city_fixed):
         city_fixed = city_fixed.lower()
@@ -524,18 +339,6 @@ def correct_address(db, csv_file, street=None, ward=None, district=None, city=No
                 print(group.group())
                 street_fixed = street_fixed.replace(group.group(), '').lstrip()
         return street_fixed.replace(' ', '_')
-
-    def correct_capital(raw, fixed):
-        fixed = fixed.replace('_', ' ')
-        if raw.islower():
-            fixed = fixed.lower()
-        elif raw.isupper():
-            fixed = fixed.upper()
-        else:
-            fixed = fixed.split(' ')
-            fixed = [word.capitalize() for word in fixed]
-            fixed = ' '.join(fixed)
-        return fixed
 
     output = {}
     output['city_fixed'] = None
@@ -710,6 +513,7 @@ def correct_address(db, csv_file, street=None, ward=None, district=None, city=No
         output['street_fixed'] = street
 
     return output
+
 # def load_address_correction(db_file, db_out):
 #     # with open(db_file, encoding='utf-8') as f:
 #     #     data = json.load(f)

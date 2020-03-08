@@ -12,7 +12,6 @@ def load_name_corection(dictionary_path, bigram_path):
     sym_spell.load_bigram_dictionary(bigram_path, term_index=0, count_index=2, encoding='utf-8')
     return sym_spell
 
-
 def correct_capital(raw, fixed):
     fixed = fixed.replace('_', ' ')
     if raw.islower():

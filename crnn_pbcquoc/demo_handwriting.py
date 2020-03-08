@@ -6,7 +6,7 @@ import models.crnn128 as crnn128
 import time, os
 
 import cv2
-from loader import ImageFileLoader, alignCollate, NumpyListLoader
+from utils.loader import ImageFileLoader, alignCollate, NumpyListLoader
 import models.utils as utils
 import config
 from torchvision import transforms
@@ -23,7 +23,7 @@ alphabet_path = config.alphabet_path
 workers = config.workers_test
 batch_size = config.batch_size_test
 label = config.label
-debug = config.debug
+debug = True
 alphabet = open(alphabet_path).read().rstrip()
 nclass = len(alphabet) + 1
 nc = 3
@@ -84,9 +84,9 @@ def predict(dir, batch_sz, max_iter=10000):
             raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
             # print('    ', raw_pred)
             #print(' =>', sim_pred)
-            #print(sim_pred)
+            print(sim_pred)
             #print(img_paths)
-            print(cpu_texts[0])
+            #print(cpu_texts[0])
             if debug:
                 inv_tensor = inv_normalize(cpu_images[0])
                 cv_img = inv_tensor.permute(1, 2, 0).numpy()

@@ -6,12 +6,12 @@ import time, os
 import pickle
 
 import cv2
-from loader import alignCollate, NumpyListLoader
+from utils.loader import alignCollate, NumpyListLoader
 import models.utils as utils
 import config
 from torchvision import transforms
-from image_preprocessing import extract_for_demo
-from image_calibration import calib_image
+from pre_processing.image_preprocessing import extract_for_demo
+from pre_processing.image_calibration import calib_image
 from symspellpy.address_spell_check import correct_address
 from symspellpy.name_spell_check import load_name_corection, correct_name
 
@@ -26,7 +26,7 @@ workers = 4
 batch_size = 8
 
 label = config.label
-debug = False
+debug = True
 if debug:
     batch_size = 1
 alphabet = open(alphabet_path).read().rstrip()
@@ -60,18 +60,6 @@ def init_models(batch_sz):
     image = Variable(image)
     model.eval()
     return model, converter, image
-
-def correct_capital(raw, fixed):
-    fixed = fixed.replace('_', ' ')
-    if raw.islower():
-        fixed = fixed.lower()
-    elif raw.isupper():
-        fixed = fixed.upper()
-    else:
-        fixed = fixed.split(' ')
-        fixed = [word.capitalize() for word in fixed]
-        fixed = ' '.join(fixed)
-    return fixed
 
 def init_post_processing(address_db_path, name_db, name_bigram):
     with open(address_db_path, 'rb') as handle:
@@ -113,7 +101,6 @@ def recognize(model, converter, image, numpy_list, batch_sz, max_iter = 10000):
             #raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
             #print('    ', raw_pred)
             #print(' =>', sim_pred)
-            #print(sim_pred)
             if debug:
                 print(' =>', sim_pred)
                 inv_tensor = inv_normalize(cpu_images[0])
@@ -127,7 +114,7 @@ def recognize(model, converter, image, numpy_list, batch_sz, max_iter = 10000):
     return list_value
 
 def predict(list_img_path, batch_size = 16, post_processing=True,
-            config_file= 'form/template_VIB_page1_demo.txt',
+            config_file= 'form/template_VIB_page1_demo2.txt',
             address_db_path='symspellpy/db.pickle',
             address_csv_path='symspellpy/dvhcvn.csv',
             name_dict= "symspellpy/freq_name_dic.txt",
@@ -151,7 +138,6 @@ def predict(list_img_path, batch_size = 16, post_processing=True,
     print('Get data time', end_transform - end_init, 'seconds')
     list_obj = extract_for_demo(img_list, path_config_file=config_file, eraseline=False, subtract_bgr=True)
 
-
     pred_output=dict()
     numpy_data = []
     for obj in list_obj:
@@ -161,10 +147,8 @@ def predict(list_img_path, batch_size = 16, post_processing=True,
     end_extract = time.time()
     print('Extract data time', end_extract - end_transform, 'seconds')
     list_value = recognize(model, converter, image, numpy_data, batch_size)
-    #print(list_value)
+    print(list_value)
 
-    print ('recognized name:',list_value[0])
-    print ('recognized city:',list_value[7] ,'district:',list_value[6], 'ward:',list_value[5],'street:', list_value[4])
     end_predict = time.time()
     print('Recognize time', end_predict - end_extract, 'seconds')
 
@@ -173,7 +157,11 @@ def predict(list_img_path, batch_size = 16, post_processing=True,
                                         district=list_value[6], city=list_value[7])
         fixed_name = correct_name(name_db, list_value[0])
 
-
+        list_value[4]=fixed_address['street_fixed']
+        list_value[5]=fixed_address['ward_fixed']
+        list_value[6]=fixed_address['district_fixed']
+        list_value[7]=fixed_address['city_fixed']
+        list_value[0]=fixed_name[0]
 
         print('\nfixed name:', fixed_name[0])
         print('fixed address:', fixed_address)
@@ -200,7 +188,7 @@ if __name__== "__main__":
     for idx in range(len(imgs)):
         imgs[idx]=os.path.join(img_dir,imgs[idx])
 
-    img_path='/data/data_imageVIB/vib_page1/vib_page1-28.jpg'
+    img_path='/data/data_imageVIB/VIB_test_for_demo_06Mar/20200304 AICR Test-5.jpg'
     #img_path='/data/data_imageVIB/vib_page1/0001_ori.jpg'
-    predict([img_path], batch_size=batch_size)
+    print(predict([img_path], batch_size=batch_size))
 

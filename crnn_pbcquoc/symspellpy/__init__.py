@@ -9,3 +9,4 @@
 from . import edit_distance
 from . import helpers
 from .symspellpy import SymSpell, Verbosity
+from .name_spell_check import correct_capital

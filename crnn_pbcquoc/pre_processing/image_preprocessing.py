@@ -7,7 +7,7 @@ from os import listdir
 from datetime import datetime
 import shutil
 import random
-from table_border_extraction_fns import get_h_and_v_line_bbox, \
+from pre_processing.table_border_extraction_fns import get_h_and_v_line_bbox, \
     clTable, get_h_and_v_line_bbox_CNX, filter_lines_error, detect_table
 
 kernel_sharpening = np.array([[0, 0, 0, 0, -1, 0, 0, 0, 0],
@@ -448,8 +448,8 @@ def extract_for_demo(listimg, path_config_file, save_path=None, eraseline=False,
             cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
             cv2.putText(img_save_bl, if_box[1], (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
             classimginf.location = [bx,by,ex,ey]
-            info_img = crop_image(img_bl, bx, by, ex, ey, offsety=1, offsetx=1)
-            #cv2.imwrite('form/'+if_box[0]+'.jpg',info_img)
+            info_img = crop_image(img_bl, bx, by, ex, ey, offsety=0, offsetx=0)
+            #cv2.imwrite('form/'+ if_box[0]+'.jpg',info_img)
             if subtract_bgr:
                 info_img = background_subtract(info_img, bgr_path='form/'+if_box[0]+'.jpg')
             if eraseline == True:
