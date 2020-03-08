@@ -239,7 +239,7 @@ def gen_blank_image(target_dir, num=150):
 if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
     final_list_dir=[]
-    root_dir = '/data/train_data_30k_8Mar'
+    root_dir = '/home/duycuong/PycharmProjects/dataset/train_data_30k_8Mar'
 
     # data_dir = 'cleaned_data_number_box/train'
     # list_dir = get_list_dir_in_folder(os.path.join(root_dir, data_dir))

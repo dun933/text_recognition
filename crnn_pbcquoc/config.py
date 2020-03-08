@@ -4,9 +4,9 @@ imgH = 64
 alphabet_path = 'data/char_246'
 
 #train
-train_dir='/data/train_data_30k_8Mar'
+train_dir='/home/duycuong/PycharmProjects/dataset/train_data_30k_8Mar'
 pretrained='outputs/train_2020-02-29_11-31/AICR_ocr_dataset_mod_32.pth'
-#pretrained=''
+pretrained=''
 gpu_train = '0'  #'0,1' or None
 base_lr = 0.0005
 max_epoches = 200

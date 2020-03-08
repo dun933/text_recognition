@@ -24,7 +24,7 @@ from torchvision import transforms
 
 training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
 output_dir = 'outputs/train_' + training_time
-ckpt_prefix=config.ckpt_prefix
+ckpt_prefix = config.ckpt_prefix
 data_dir = config.train_dir
 pretrained = config.pretrained
 imgW = config.imgW
@@ -40,11 +40,14 @@ batch_size = config.batch_size
 class writer:
     def __init__(self, *writers):
         self.writers = writers
+
     def write(self, text):
         for w in self.writers:
             w.write(text)
+
     def flush(self):
         pass
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=data_dir, help='path to root folder')
@@ -87,27 +90,27 @@ cudnn.benchmark = True
 if torch.cuda.is_available() and opt.gpu == None:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-#augmentation
+# augmentation
 transform_train = transforms.Compose([transforms.RandomRotation(5)])
 transform_train = None
 train_dataset = ImageFileLoader(opt.root, opt.train, transform=transform_train)
 
 train_loader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=batch_size,
-            num_workers=opt.workers,
-            shuffle=True,
-            collate_fn=alignCollate(opt.imgW, opt.imgH)
-        )
+    train_dataset,
+    batch_size=batch_size,
+    num_workers=opt.workers,
+    shuffle=True,
+    collate_fn=alignCollate(opt.imgW, opt.imgH)
+)
 
 val_dataset = ImageFileLoader(opt.root, opt.val)
 val_loader = torch.utils.data.DataLoader(
-            val_dataset,
-            batch_size=batch_size,
-            num_workers=opt.workers,
-            shuffle=True,
-            collate_fn=alignCollate(opt.imgW, opt.imgH)
-        )
+    val_dataset,
+    batch_size=batch_size,
+    num_workers=opt.workers,
+    shuffle=True,
+    collate_fn=alignCollate(opt.imgW, opt.imgH)
+)
 
 alphabet = open(opt.alphabet).read().rstrip()
 nclass = len(alphabet) + 1
@@ -118,7 +121,7 @@ converter = utils.strLabelConverter(alphabet, ignore_case=False)
 criterion = CTCLoss()
 
 crnn = crnn.CRNN2(opt.imgH, num_channel, nclass, opt.nh)
-#crnn = crnn128.CRNN128(opt.imgH, num_channel, nclass, opt.nh)
+# crnn = crnn128.CRNN128(opt.imgH, num_channel, nclass, opt.nh)
 if opt.pretrained != '':
     print('loading pretrained model from %s' % opt.pretrained)
     pretrain = torch.load(opt.pretrained)
@@ -143,6 +146,7 @@ train_cer_avg = utils.averager()
 
 # setup optimizer
 optimizer = optim.Adam(crnn.parameters(), lr=opt.lr)
+
 
 def val(net, data_loader, criterion, max_iter=1000):
     print('Start val')
@@ -173,27 +177,23 @@ def val(net, data_loader, criterion, max_iter=1000):
             _, preds = preds.max(2)
             preds = preds.transpose(1, 0).contiguous().view(-1)
             sim_preds = converter.decode(preds.data, preds_size.data, raw=False)
-            # print('img')
-            # print(_)
-            # print('sim pred')
-            # print(sim_preds)
-            # print('cpu_texts')
-            # print(cpu_texts)
             cer_loss = utils.cer_loss(sim_preds, cpu_texts)
             val_cer_avg.add(cer_loss)
 
     raw_preds = converter.decode(preds.data, preds_size.data, raw=True)[:opt.n_test_disp]
     for raw_pred, pred, gt in zip(raw_preds, sim_preds, cpu_texts):
         print('%-30s => %-30s, gt: %-30s' % (raw_pred, pred, gt))
-
-    print('Test loss: %f - cer loss %f' % (val_loss_avg.val(), val_cer_avg.val()))
+    test_loss = val_loss_avg.val()
+    test_cer = val_cer_avg.val()
+    print('Test loss: %f - test cer %f' % (test_loss, test_cer))
+    return test_loss, test_cer
 
 
 def trainBatch(net, data, criterion, optimizer):
     cpu_images, cpu_texts, img_paths = data
     batch_sz = cpu_images.size(0)
     utils.loadData(image, cpu_images)
-    #print('cputext:',cpu_texts, 'img path:',img_paths)
+    # print('cputext:',cpu_texts, 'img path:',img_paths)
     t, l = converter.encode(cpu_texts)
     utils.loadData(text, t)
     utils.loadData(length, l)
@@ -226,21 +226,22 @@ for epoch in range(1, opt.nepoch + 1):
         train_loss_avg.add(cost)
         train_cer_avg.add(cer_loss)
 
-    print('[%d/%d] Loss: %f - cer loss: %f' %
+    print('[%d/%d] Train loss: %f - train cer: %f' %
           (epoch, opt.nepoch, train_loss_avg.val(), train_cer_avg.val()))
     train_loss_avg.reset()
     train_cer_avg.reset()
 
     if epoch % opt.valInterval == 0:
         begin_val = time.time()
-        val(crnn, val_loader, criterion)
+        test_loss, test_cer = val(crnn, val_loader, criterion)
         end_val = time.time()
         print('Time for val:', end_val - begin_val, 'seconds')
 
     # do checkpointing
     if epoch % opt.saveInterval == 0:
         torch.save(
-            crnn.state_dict(), ('{}/'+ckpt_prefix+'_{}.pth').format(opt.expr_dir, epoch))
+            crnn.state_dict(),
+            ('{}/' + ckpt_prefix + '_{}_loss_{}_cer_{}.pth').format(opt.expr_dir, epoch, round(test_loss,2), round(test_cer,4)))
     end = time.time()
     print('Time for epoch:', end - begin, 'seconds')
 
