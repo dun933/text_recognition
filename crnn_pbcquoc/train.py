@@ -12,7 +12,7 @@ import numpy as np
 from warpctc_pytorch import CTCLoss
 import os, time
 import models.utils as utils
-from loader import ImageFileLoader, alignCollate
+from utils.loader import ImageFileLoader, alignCollate
 from multiprocessing import cpu_count
 from tqdm import tqdm
 from torchsummary import summary
@@ -173,6 +173,12 @@ def val(net, data_loader, criterion, max_iter=1000):
             _, preds = preds.max(2)
             preds = preds.transpose(1, 0).contiguous().view(-1)
             sim_preds = converter.decode(preds.data, preds_size.data, raw=False)
+            # print('img')
+            # print(_)
+            # print('sim pred')
+            # print(sim_preds)
+            # print('cpu_texts')
+            # print(cpu_texts)
             cer_loss = utils.cer_loss(sim_preds, cpu_texts)
             val_cer_avg.add(cer_loss)
 

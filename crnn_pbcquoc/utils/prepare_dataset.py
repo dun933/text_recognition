@@ -86,10 +86,10 @@ def prepare_train_from_icdar(data_dir, output_dir):
     print('max width height ratio in dataset', max_wh)
     print('Total word:', count)
 
-def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=0.0, convert=False):
+def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=1.0, convert=False):
     list_dir_txt = []
     print('root dir:', root_dir)
-    from unicode_utils import compound_unicode
+    from utils.unicode_utils import compound_unicode
     for dir in list_dir:
         # if os.path.exists(os.path.join(root_dir,dir,'origine.jpg')):
         #     os.remove(os.path.join(root_dir,dir,'origine.jpg'))
@@ -169,12 +169,6 @@ def crop_collected_data(dir, file_list=['2','8','14','20'], debug=False):
                 cv2.waitKey(0)
             cv2.imwrite(file_path, crop_img)
 
-def temp():
-    import json
-    with open('temp.json', 'w', encoding='utf-8') as f:
-        json.dump('Đường Nguyễn Phong Sắc, Huyện Thủy Nguyên, Hải Phòng, Đường Lâm Hạ, Quận Long Biên, Hà Nội,  ̀', f,
-                  ensure_ascii=True)
-
 def crop_collected_data2(dir, debug=False):
     list_files = get_list_file_in_folder(dir)
     count1=0
@@ -245,7 +239,12 @@ def gen_blank_image(target_dir, num=150):
 if __name__ == "__main__":
     # prepare_train_from_icdar(icdar_dir, output_dir)
     final_list_dir=[]
-    root_dir = '/home/duycuong/PycharmProjects/dataset'
+    root_dir = '/data/train_data_30k_8Mar'
+
+    # data_dir = 'cleaned_data_number_box/train'
+    # list_dir = get_list_dir_in_folder(os.path.join(root_dir, data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir, dir))
 
     # data_dir='cleaned_data_merge_fixed/train'
     # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
@@ -284,6 +283,11 @@ if __name__ == "__main__":
     # for dir in list_dir:
     #     final_list_dir.append(os.path.join(data_dir,dir))
 
+    data_dir = 'cleaned_data_number_box/test'
+    list_dir = get_list_dir_in_folder(os.path.join(root_dir, data_dir))
+    for dir in list_dir:
+        final_list_dir.append(os.path.join(data_dir, dir))
+
     final_list_dir.append('cinnamon_data/cinamon_test_115')
 
     data_dir='cleaned_data_merge_fixed/AICR_test1'
@@ -293,7 +297,7 @@ if __name__ == "__main__":
 
     final_list_dir.append('cleaned_data_merge_fixed/AICR_test2')
 
-    prepare_train_test_from_multiple_dir(root_dir, final_list_dir)
+    prepare_train_test_from_multiple_dir(root_dir, final_list_dir, train_ratio=0.0)
     #img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
     #crop_collected_data2(img_dir)
     # gen_blank_image('/home/duycuong/PycharmProjects/dataset/blank_images')

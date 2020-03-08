@@ -217,8 +217,12 @@ def cer_loss_one_image(sim_pred, label):
 def cer_loss(sim_preds, labels):
     losses = []
     for i in range(len(sim_preds)):
-        pred = sim_preds[i]
-        text = labels[i]
+        pred, text ='0','0'
+        try:
+            pred = sim_preds[i]
+            text = labels[i]
+        except:
+            pass
 
         loss = cer_loss_one_image(pred, text)
         losses.append(loss)
