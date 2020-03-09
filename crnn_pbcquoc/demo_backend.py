@@ -15,7 +15,7 @@ from pre_processing.image_calibration import calib_image
 from symspellpy.address_spell_check import correct_address
 from symspellpy.name_spell_check import load_name_corection, correct_name
 
-img_dir = '/data/data_imageVIB/vib_page1'
+img_dir = '/home/duycuong/PycharmProjects/dataset/data_imageVIB/vib_page1'
 test_list=config.test_list
 pretrained = config.pretrained_test
 imgW = config.imgW
@@ -114,7 +114,7 @@ def recognize(model, converter, image, numpy_list, batch_sz, max_iter = 10000):
     return list_value
 
 def predict(list_img_path, batch_size = 16, post_processing=True,
-            config_file= 'form/template_VIB_page1_demo2.txt',
+            config_file= 'form/template_VIB_page1.txt',
             address_db_path='symspellpy/db.pickle',
             address_csv_path='symspellpy/dvhcvn.csv',
             name_dict= "symspellpy/freq_name_dic.txt",
