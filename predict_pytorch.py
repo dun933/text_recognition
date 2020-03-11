@@ -1,16 +1,16 @@
 import numpy as np
 import torch, cv2, math
 import os, time
-from DB_Liao.concern.config import Configurable, Config
+from detector_DB.concern.config import Configurable, Config
 from BoundingBox import bbox
 import argparse
 
 #classifier
-from crnn_pbcquoc.models.utils import strLabelConverter
+from classifier_CRNN.models.utils import strLabelConverter
 from torch.autograd import Variable
-import crnn_pbcquoc.models.crnn as crnn
-import crnn_pbcquoc.models.utils as utils
-from crnn_pbcquoc.loader import NumpyListLoader, alignCollate
+import classifier_CRNN.models.crnn as crnn
+import classifier_CRNN.models.utils as utils
+from classifier_CRNN.utils.loader import NumpyListLoader, alignCollate
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 os.environ["PYTHONIOENCODING"] = "utf-8"
@@ -19,24 +19,24 @@ gpu= '0'
 #gpu= None
 img_path = 'data/CMND/2.jpg'
 #img_path = '/home/aicr/cuongnd/text_recognition/data/handwriting/IMG_3794.JPG'
-img_path = '/data/data_imageVIB/vib_page1/vib_page1-01.jpg'
+img_path = 'classifier_CRNN/data/VIB_page1/vib_page1-26.jpg'
 output_dir='outputs'
 #detector
-detector_model = 'model_epoch_38_minibatch_114000'
+detector_model = 'model_epoch_200_minibatch_297000_8Mar'
 detector_box_thres = 0.315
 config_file = 'config/aicr_ic15_resnet18.yaml'
-ckpt_path = 'DB_Liao/outputs/' + detector_model
-polygon = True
+ckpt_path = 'detector_DB/outputs/' + detector_model
+polygon = False
 visualize = True
 img_short_side = 736  # 736
 
 # classifier
 classifier_ckpt_path = 'models/AICR_CRNN_printing_11.pth'
-classifier_width = 128
-classifier_height = 32
+classifier_width = 256
+classifier_height = 64
 alphabet_path='config/char_229'
 if classifier_height == 64:
-    classifier_ckpt_path = 'crnn_pbcquoc/outputs/train_2020-03-01_22-13_finetune_new_data2/AICR_finetune_new_data_44_loss_7.266_cer_0.028.pth'
+    classifier_ckpt_path = 'classifier_CRNN/ckpt/AICR_finetune_new_data_44_loss_7.266_cer_0.028.pth'
     alphabet_path='config/char_246'
 classifier_batch_sz = 16
 draw_text=True
