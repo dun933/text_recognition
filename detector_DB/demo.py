@@ -12,6 +12,7 @@ img_path = '../classifier_CRNN/data/data_imageVIB/VIB_page1/vib_page1-28.jpg'
 # img_path= '../data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
 # img_path= '/home/aicr/cuongnd/text_recognition/data/Cello/imgs/190715070245517_8478000669_pod.png'
 # img_path='/home/aicr/cuongnd/text_recognition/data/CMND/5.jpg'
+
 detector_model = 'model_epoch_200_minibatch_297000_8Mar'
 ckpt_path = 'outputs/' + detector_model
 polygon = True

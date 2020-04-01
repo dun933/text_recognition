@@ -19,6 +19,7 @@ gpu= '0'
 #gpu= None
 img_path = 'data/SDV_invoices/I-1.png'
 img_path = '/home/aicr/cuongnd/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
+
 output_dir='outputs'
 #detector
 detector_model = 'model_epoch_200_minibatch_297000_8Mar'
@@ -35,7 +36,7 @@ classifier_width = 256
 classifier_height = 64
 alphabet_path='config/char_229'
 if classifier_height == 64:
-    classifier_ckpt_path = 'classifier_CRNN/ckpt/AICR_SDV_30Mar_No_update_hw_300_loss_1.25_cer_0.0076.pth'
+    classifier_ckpt_path = 'classifier_CRNN/ckpt/AICR_SDV_30Mar_300_loss_1.25_cer_0.0076.pth'
     alphabet_path='config/char_246'
 classifier_batch_sz = 16
 draw_text=True

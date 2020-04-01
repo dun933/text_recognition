@@ -6,6 +6,7 @@ warp-ctc/
 *.pyc
 *.swp
 *.pkl
+*.zip
 *.pth
 *.hdf5
 weights*

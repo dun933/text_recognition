@@ -1,7 +1,7 @@
 outputs/
 expr/
 .idea/
-#ckpt/
+ckpt/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
