@@ -7,7 +7,7 @@ warp-ctc/
 *.swp
 *.pkl
 *.zip
-*.pth
+#*.pth
 *.hdf5
 weights*
 *.pickle
