@@ -37,6 +37,17 @@ std = [0.229, 0.224, 0.225]
 #         return [''.join([self.idx2char[idx] for idx in row if idx < len(self.idx2char)]) for row in preds_idx]
 
 
+class writer:
+    def __init__(self, *writers):
+        self.writers = writers
+
+    def write(self, text):
+        for w in self.writers:
+            w.write(text)
+
+    def flush(self):
+        pass
+
 def resizePadding(img, width, height):
     desired_w, desired_h = width, height  # (width, height)
     img_w, img_h = img.size  # old_size[0] is in (width, height) format
@@ -189,7 +200,6 @@ def oneHot(v, v_length, nc):
 
 def loadData(v, data):
     v.resize_(data.size()).copy_(data)
-
 
 def prettyPrint(v):
     print('Size {0}, Type: {1}'.format(str(v.size()), v.data.type()))

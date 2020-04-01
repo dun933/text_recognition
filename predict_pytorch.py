@@ -17,9 +17,8 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 
 gpu= '0'
 #gpu= None
-img_path = 'data/CMND/2.jpg'
-#img_path = '/home/aicr/cuongnd/text_recognition/data/handwriting/IMG_3794.JPG'
-img_path = 'classifier_CRNN/data/VIB_page1/vib_page1-26.jpg'
+img_path = 'data/SDV_invoices/I-1.png'
+img_path = '/home/aicr/cuongnd/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
 output_dir='outputs'
 #detector
 detector_model = 'model_epoch_200_minibatch_297000_8Mar'
@@ -36,7 +35,7 @@ classifier_width = 256
 classifier_height = 64
 alphabet_path='config/char_229'
 if classifier_height == 64:
-    classifier_ckpt_path = 'classifier_CRNN/ckpt/AICR_finetune_new_data_44_loss_7.266_cer_0.028.pth'
+    classifier_ckpt_path = 'classifier_CRNN/ckpt/AICR_SDV_30Mar_No_update_hw_300_loss_1.25_cer_0.0076.pth'
     alphabet_path='config/char_246'
 classifier_batch_sz = 16
 draw_text=True
@@ -219,6 +218,11 @@ class Detector_DB:
             boxes = boxes[0]
             if visualize and self.structure.visualizer:
                 vis_image = self.structure.visualizer.demo_visualize(image_path, output)
+                #s_image = cv2.resize(vis_image,fx=0.5, fy=0.5)
+                #ch = cv2.imshow('result',vis_image)
+
+                #cv2.waitKey(0)
+
                 cv2.imwrite(os.path.join(self.args['result_dir'],
                                          image_path.split('/')[-1].split('.')[0] + '_ ' + detector_model + '_ ' + str
                                          (detector_box_thres) + '.jpg'), vis_image)
@@ -236,9 +240,9 @@ class Classifier_CRNN:
         self.text = torch.IntTensor(batch_sz * 5)
         self.length = torch.IntTensor(batch_sz)
         if classifier_height ==32:
-            self.model = crnn.CRNN(imgH, num_channel, nclass, 256)
+            self.model = crnn.CRNN32(imgH, num_channel, nclass, 256)
         else:
-            self.model = crnn.CRNN2(imgH, num_channel, nclass, 256)
+            self.model = crnn.CRNN64(imgH, num_channel, nclass, 256)
         if gpu != None and torch.cuda.is_available():
             self.model = self.model.cuda()
             self.image = self.image.cuda()

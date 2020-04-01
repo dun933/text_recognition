@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch
 
 class BidirectionalLSTM(nn.Module):
-
     def __init__(self, nIn, nHidden, nOut, dropout=0):
         super(BidirectionalLSTM, self).__init__()
 
@@ -19,14 +18,12 @@ class BidirectionalLSTM(nn.Module):
 
         output = self.embedding(t_rec)  # [T * b, nOut]
         output = output.view(T, b, -1)
-
         return output
 
 
-class CRNN(nn.Module):
-
+class CRNN32(nn.Module):
     def __init__(self, imgH, nc, nclass, nh, n_rnn=2, leakyRelu=False):
-        super(CRNN, self).__init__()
+        super(CRNN32, self).__init__()
         assert imgH % 16 == 0, 'imgH has to be a multiple of 16'
 
         ks = [3, 3, 3, 3, 3, 3, 2]
@@ -81,9 +78,9 @@ class CRNN(nn.Module):
 
         return output
 
-class CRNN2(nn.Module):
+class CRNN64(nn.Module):
     def __init__(self, imgH, nc, nclass, nh, n_rnn=2, leakyRelu=False):
-        super(CRNN2, self).__init__()
+        super(CRNN64, self).__init__()
         assert imgH % 16 == 0, 'imgH has to be a multiple of 16'
 
         ks = [3, 3, 3, 3, 3, 3, 2, 2]

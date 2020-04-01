@@ -13,47 +13,68 @@ from warpctc_pytorch import CTCLoss
 import os, time
 import models.utils as utils
 from utils.loader import ImageFileLoader, alignCollate
+from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import cpu_count
 from tqdm import tqdm
 from torchsummary import summary
 import models.crnn as crnn
 import models.crnn128 as crnn128
 from datetime import datetime
-import config
+import config_crnn
 from torchvision import transforms
-from pre_processing.augment_functions import cnx_aug_resize_img
+from models.utils import writer
+from pre_processing.augment_functions import cnd_aug_randomResizePadding, cnd_aug_resizePadding, cnx_aug_add_line, \
+    cnx_aug_bold_characters, cnx_aug_thin_characters, cnd_aug_add_line, cnx_aug_blur
+from torchvision.transforms import RandomApply, ColorJitter, RandomAffine, ToTensor, Normalize
 
 training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
 output_dir = 'outputs/train_' + training_time
-ckpt_prefix = config.ckpt_prefix
-data_dir = config.train_dir
-pretrained = config.pretrained
-imgW = config.imgW
-imgH = config.imgH
-gpu = config.gpu_train
-base_lr = config.base_lr
-max_epoches = config.max_epoches
-alphabet_path = config.alphabet_path
-workers = config.workers_train
-batch_size = config.batch_size
+ckpt_prefix = config_crnn.ckpt_prefix
+data_dir = config_crnn.train_dir
+pretrained = config_crnn.pretrained
+imgW = config_crnn.imgW
+imgH = config_crnn.imgH
+gpu = config_crnn.gpu_train
+base_lr = config_crnn.base_lr
+max_epoches = config_crnn.max_epoches
+alphabet_path = config_crnn.alphabet_path
+workers = config_crnn.workers_train
+batch_size = config_crnn.batch_size
 
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
+fill_color = (255, 255, 255) #(209, 200, 193)
+min_scale, max_scale = 2 / 3, 2
 
-class writer:
-    def __init__(self, *writers):
-        self.writers = writers
+transform_train = transforms.Compose([
+        # RandomApply([cnx_aug_thin_characters()], p=0.2),
+        # RandomApply([cnx_aug_bold_characters()], p=0.4),
+        # cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color),
+        cnd_aug_resizePadding(imgW, imgH, fill=fill_color),
+        RandomApply([cnd_aug_add_line()], p=0.3),
+        RandomApply([cnx_aug_blur()], p=0.3),
+        ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+        RandomApply([RandomAffine(shear=(-20, 20),
+                                  translate=(0.0, 0.05),
+                                  degrees=0,
+                                  # degrees=2,
+                                  # scale=(0.8, 1),
+                                  fillcolor=fill_color)], p=0.3)
+        ,ToTensor()
+        ,Normalize(mean, std)
+    ])
 
-    def write(self, text):
-        for w in self.writers:
-            w.write(text)
-
-    def flush(self):
-        pass
-
+transform_test = transforms.Compose([
+    #cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color, train=False),
+    cnd_aug_resizePadding(imgW, imgH, fill=fill_color, train=False),
+    ToTensor(),
+    Normalize(mean, std)
+])
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=data_dir, help='path to root folder')
-parser.add_argument('--train', default='train.txt', help='path to train set')
-parser.add_argument('--val', default='val.txt', help='path to val set')
+parser.add_argument('--train', default='train_merge.txt', help='path to train set')
+parser.add_argument('--val', default='val_merge.txt', help='path to val set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=workers)
 parser.add_argument('--batch_size', type=int, default=batch_size, help='input batch size')
 parser.add_argument('--imgH', type=int, default=imgH, help='the height of the input image to network')
@@ -76,11 +97,13 @@ if not os.path.exists(opt.expr_dir):
     os.makedirs(opt.expr_dir)
 saved = sys.stdout
 log_file = os.path.join(opt.expr_dir, "train.log")
-print('Please check output of training process in:', log_file)
 f = open(log_file, 'w')
 sys.stdout = writer(sys.stdout, f)
 
+print('Please check output of training process in:', log_file)
 print(opt)
+print('Transform train:\n',transform_train)
+print('Transform val:\n',transform_test)
 os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpu
 
 random.seed(opt.manualSeed)
@@ -91,27 +114,21 @@ cudnn.benchmark = True
 if torch.cuda.is_available() and opt.gpu == None:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-# augmentation
-#transform_train = transforms.Compose([transforms.RandomRotation(5)])
-transform_train = transforms.Compose([cnx_aug_resize_img(None, None, 0.5, 0.5)])
-#transform_train = None
 train_dataset = ImageFileLoader(opt.root, opt.train, transform=transform_train)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,
     batch_size=batch_size,
     num_workers=opt.workers,
-    shuffle=True,
-    collate_fn=alignCollate(opt.imgW, opt.imgH)
+    shuffle=True
 )
 
-val_dataset = ImageFileLoader(opt.root, opt.val)
+val_dataset = ImageFileLoader(opt.root, opt.val, transform=transform_test)
 val_loader = torch.utils.data.DataLoader(
     val_dataset,
     batch_size=batch_size,
     num_workers=opt.workers,
-    shuffle=True,
-    collate_fn=alignCollate(opt.imgW, opt.imgH)
+    shuffle=True
 )
 
 alphabet = open(opt.alphabet).read().rstrip()
@@ -119,10 +136,15 @@ nclass = len(alphabet) + 1
 num_channel = 3
 
 print(len(alphabet), alphabet)
+writer = SummaryWriter(opt.expr_dir)
 converter = utils.strLabelConverter(alphabet, ignore_case=False)
 criterion = CTCLoss()
 
-crnn = crnn.CRNN2(opt.imgH, num_channel, nclass, opt.nh)
+if opt.imgH==32:
+    crnn = crnn.CRNN32(opt.imgH, num_channel, nclass, opt.nh)
+else:
+    crnn = crnn.CRNN64(opt.imgH, num_channel, nclass, opt.nh)
+
 # crnn = crnn128.CRNN128(opt.imgH, num_channel, nclass, opt.nh)
 if opt.pretrained != '':
     print('loading pretrained model from %s' % opt.pretrained)
@@ -227,7 +249,8 @@ for epoch in range(1, opt.nepoch + 1):
 
         train_loss_avg.add(cost)
         train_cer_avg.add(cer_loss)
-
+    writer.add_scalar('Train loss', train_loss_avg.val(), epoch)
+    writer.add_scalar('Train cer', train_cer_avg.val(), epoch)
     print('[%d/%d] Train loss: %f - train cer: %f' %
           (epoch, opt.nepoch, train_loss_avg.val(), train_cer_avg.val()))
     train_loss_avg.reset()
@@ -236,6 +259,8 @@ for epoch in range(1, opt.nepoch + 1):
     if epoch % opt.valInterval == 0:
         begin_val = time.time()
         test_loss, test_cer = val(crnn, val_loader, criterion)
+        writer.add_scalar('Test loss', test_loss, epoch)
+        writer.add_scalar('Test cer', test_cer, epoch)
         end_val = time.time()
         print('Time for val:', end_val - begin_val, 'seconds')
 
@@ -243,9 +268,11 @@ for epoch in range(1, opt.nepoch + 1):
     if epoch % opt.saveInterval == 0:
         torch.save(
             crnn.state_dict(),
-            ('{}/' + ckpt_prefix + '_{}_loss_{}_cer_{}.pth').format(opt.expr_dir, epoch, round(test_loss,2), round(test_cer,4)))
+            ('{}/' + ckpt_prefix + '_{}_loss_{}_cer_{}.pth').format(opt.expr_dir, epoch, round(test_loss, 2),
+                                                                    round(test_cer, 4)))
     end = time.time()
     print('Time for epoch:', end - begin, 'seconds')
 
 sys.stdout = saved
+writer.close()
 f.close()

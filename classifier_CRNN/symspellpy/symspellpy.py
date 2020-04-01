@@ -12,8 +12,12 @@ import pickle
 import re
 import sys
 from difflib import SequenceMatcher
-from .edit_distance import DistanceAlgorithm, edit_distance
-from . import helpers as helpers
+try:
+    from .edit_distance import DistanceAlgorithm, edit_distance
+    from . import helpers
+except:
+    from edit_distance import DistanceAlgorithm, edit_distance
+    import helpers
 import collections
 import re
 
@@ -115,7 +119,7 @@ class SymSpell(object):
         self._max_dictionary_edit_distance = max_dictionary_edit_distance
         self._prefix_length = prefix_length
         self._count_threshold = count_threshold
-        self._distance_algorithm = DistanceAlgorithm.LEVENSHTEIN
+        self._distance_algorithm = DistanceAlgorithm.DAMERUAUOSA
         self._max_length = 20
         self._replaced_words = dict()
 

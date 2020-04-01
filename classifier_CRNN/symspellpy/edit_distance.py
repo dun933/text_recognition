@@ -5,8 +5,10 @@
 from enum import Enum
 
 import numpy as np
-
-from . import helpers as helpers
+try:
+    from . import helpers
+except:
+    import helpers
 
 
 class DistanceAlgorithm(Enum):

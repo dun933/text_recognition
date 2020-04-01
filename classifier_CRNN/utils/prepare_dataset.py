@@ -2,9 +2,10 @@ import os, cv2, random
 import time
 import numpy as np
 import shutil
+from utils.unicode_utils import compound_unicode
 
-icdar_dir = '/home/duycuong/PycharmProjects/research_py3/text_recognition/ss/data_generator/outputs/corpus_100000_2020-01-31_14-26/images'
-output_dir = '/home/duycuong/PycharmProjects/dataset/aicr_icdar_new'
+icdar_dir = '/home/aicr/cuongnd/aicr.core/data_generator/outputs/corpus_400_2020-03-30_14-25/images'
+output_dir = '/home/aicr/cuongnd/aicr.core/data_generator/outputs/corpus_400_2020-03-30_14-25/CRNN_SDV_train'
 
 
 def get_list_file_in_folder(dir, ext='png'):
@@ -12,6 +13,7 @@ def get_list_file_in_folder(dir, ext='png'):
     file_names = [fn for fn in os.listdir(dir)
                   if any(fn.endswith(ext) for ext in included_extensions)]
     return file_names
+
 
 def get_list_dir_in_folder(dir):
     sub_dir = [o for o in os.listdir(dir) if os.path.isdir(os.path.join(dir, o))]
@@ -29,7 +31,8 @@ def crop_from_img_rectangle(img, left, top, right, bottom):
         return None
     return img[top:bottom, left:right]
 
-def prepare_train_from_icdar(data_dir, output_dir):
+
+def prepare_train_from_icdar(data_dir, output_dir, same_folder=True):
     try:
         os.makedirs(os.path.join(output_dir, 'images'))
         os.makedirs(os.path.join(output_dir, 'annos'))
@@ -76,6 +79,8 @@ def prepare_train_from_icdar(data_dir, output_dir):
             crop_img_path = os.path.join(output_dir, 'images', base_crop_name + '.jpg')
             crop_anno_path = os.path.join(output_dir, 'annos', base_crop_name + '.txt')
             cv2.imwrite(crop_img_path, crop)
+            if same_folder:
+                crop_anno_path = crop_img_path.replace('.jpg','.txt')
             with open(crop_anno_path, 'w', encoding='utf-8') as f:
                 f.write(val)
 
@@ -86,30 +91,35 @@ def prepare_train_from_icdar(data_dir, output_dir):
     print('max width height ratio in dataset', max_wh)
     print('Total word:', count)
 
+
 def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, train_ratio=1.0, convert=False):
     list_dir_txt = []
     print('root dir:', root_dir)
-    from utils.unicode_utils import compound_unicode
+
+    alphabet = open('/home/aicr/cuongnd/aicr.core/classifier_CRNN/data/char_246').read().rstrip()
     for dir in list_dir:
         # if os.path.exists(os.path.join(root_dir,dir,'origine.jpg')):
         #     os.remove(os.path.join(root_dir,dir,'origine.jpg'))
         #     print('remove file',os.path.join(root_dir,dir,'origine.jpg'))
         list_files = get_list_file_in_folder(os.path.join(root_dir, dir))
-        #convert_json_to_multiple_gt(os.path.join(root_dir, dir))
+        # convert_json_to_multiple_gt(os.path.join(root_dir, dir))
         print('Dir ', dir, 'has', len(list_files), 'files')
         for idx, file in enumerate(list_files):
-            print(file)
+            #print(file)
+            # fix unicode
+            txt_file=os.path.join(root_dir,dir, file).replace('.jpg','.txt')
+            with open(txt_file, 'r', encoding='utf-8') as f:
+                txt= f.readlines()
+            if len(txt)>0:
+                new_text=compound_unicode(txt[0])
+                for ch in txt[0]:
+                    if ch not in alphabet:
+                        print (ch, file)
+                        #os.remove(os.path.join(root_dir,dir, file))
+                        continue
+                with open(txt_file, 'w', encoding='utf-8') as f:
+                    f.write(new_text)
             list_dir_txt.append(os.path.join(dir, file))
-
-            #fix unicode
-            # txt_file=os.path.join(root_dir,dir, file).replace('.jpg','.txt')
-            # with open(txt_file, 'r', encoding='utf-8') as f:
-            #     txt= f.readlines()
-            # if len(txt)>0:
-            #     new_text=compound_unicode(txt[0])
-            #     with open(txt_file, 'w', encoding='utf-8') as f:
-            #         f.write(new_text)
-
 
     random.shuffle(list_dir_txt)
     print('\ntotal files:', len(list_dir_txt))
@@ -137,15 +147,29 @@ def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, tra
 
     print('Done')
 
+def fix_unicode(txt_file):
+    with open(txt_file, 'r', encoding='utf-8') as f:
+        txt = f.readlines()
+    final_str=''
+    for anno in txt:
+        final_str+=anno
+    if len(txt) > 0:
+        new_text = compound_unicode(final_str)
+        with open(txt_file, 'w', encoding='utf-8') as f:
+            f.write(new_text)
+
+
 def prepare_txt_file(data_dir):
     list_files = get_list_file_in_folder(data_dir)
-    save_txt=''
+    save_txt = ''
     for file in list_files:
-        save_txt+=os.path.join(data_dir,file)+'\n'
-        with open(os.path.join(data_dir,file.replace('.jpg','.txt').replace('.png','.txt')), 'w', encoding='utf-8') as f:
+        save_txt += os.path.join(data_dir, file) + '\n'
+        with open(os.path.join(data_dir, file.replace('.jpg', '.txt').replace('.png', '.txt')), 'w',
+                  encoding='utf-8') as f:
             f.write('abc')
-    with open(os.path.join(data_dir+'/..', 'test'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(data_dir + '/..', 'test'), 'w', encoding='utf-8') as f:
         f.write(save_txt)
+
 
 def convert_json_to_multiple_gt(dir, json_name='labels.json'):
     import json
@@ -156,133 +180,116 @@ def convert_json_to_multiple_gt(dir, json_name='labels.json'):
             with open(os.path.join(dir, gt_name), 'w', encoding='utf-8') as f:
                 f.write(value)
 
-def crop_collected_data(dir, file_list=['2','8','14','20'], debug=False):
+
+def crop_collected_data(dir, file_list=['2', '8', '14', '20'], debug=False):
     list_files = get_list_file_in_folder(dir)
     for file in list_files:
-        if file.replace('.jpg','') in file_list:
-            file_path=os.path.join(dir,file)
+        if file.replace('.jpg', '') in file_list:
+            file_path = os.path.join(dir, file)
             print(file_path)
-            ori_img= cv2.imread(file_path)
-            crop_img=ori_img[0:82,0:ori_img.shape[1]]
+            ori_img = cv2.imread(file_path)
+            crop_img = ori_img[0:82, 0:ori_img.shape[1]]
             if debug:
-                cv2.imshow('result',crop_img)
+                cv2.imshow('result', crop_img)
                 cv2.waitKey(0)
             cv2.imwrite(file_path, crop_img)
 
+
 def crop_collected_data2(dir, debug=False):
     list_files = get_list_file_in_folder(dir)
-    count1=0
-    count2=0
+    count1 = 0
+    count2 = 0
     for file in list_files:
         file_path = os.path.join(dir, file)
         print(file_path)
         ori_img = cv2.imread(file_path)
-        if ori_img.shape[1]/ori_img.shape[0]>9:
-            count1+=1
-            extend_val=  int(ori_img.shape[0]/9)+3
-            print ('count1',count1,'extend val',extend_val,'height',ori_img.shape[0])
+        if ori_img.shape[1] / ori_img.shape[0] > 9:
+            count1 += 1
+            extend_val = int(ori_img.shape[0] / 9) + 3
+            print('count1', count1, 'extend val', extend_val, 'height', ori_img.shape[0])
             crop_img = ori_img[extend_val:ori_img.shape[0] - extend_val - 1, 0:ori_img.shape[1]]
             if debug:
                 cv2.imshow('ttt', crop_img)
                 cv2.waitKey(0)
             cv2.imwrite(file_path, crop_img)
-        elif ori_img.shape[1]/ori_img.shape[0]>7:
-            count2+=1
-            extend_val=  int(ori_img.shape[0]/9)+1
-            print ('count2',count2,'extend val',extend_val,'height',ori_img.shape[0])
+        elif ori_img.shape[1] / ori_img.shape[0] > 7:
+            count2 += 1
+            extend_val = int(ori_img.shape[0] / 9) + 1
+            print('count2', count2, 'extend val', extend_val, 'height', ori_img.shape[0])
             crop_img = ori_img[extend_val:ori_img.shape[0] - extend_val - 1, 0:ori_img.shape[1]]
             if debug:
                 cv2.imshow('result', crop_img)
                 cv2.waitKey(0)
             cv2.imwrite(file_path, crop_img)
 
-def create_val_from_collected_data(src_dir, dst_dir):
-    list_dir=get_list_dir_in_folder(src_dir)
-    count=0
-    for idx, dir in enumerate(list_dir):
-        count+=1
-        print (count, dir)
-        if(idx<65):
-            continue
-        name1 = str(random.randint(1,24))
-        new_name1 = dir[-4:]+'_'+name1
-        src_file1=os.path.join(src_dir,dir,name1)
-        dst_file1=os.path.join(dst_dir,new_name1)
-        print('Move',src_file1)
-        print('To',dst_file1)
-        if os.path.exists(src_file1+'.jpg') and os.path.exists(os.path.exists(src_file1+'.txt')):
-            shutil.move(src_file1+'.jpg',dst_file1+'.jpg')
-            shutil.move(src_file1+'.txt',dst_file1+'.txt')
 
-        name2 = str(random.randint(1,24))
-        new_name2 = dir[-4:]+'_'+name2
-        src_file2=os.path.join(src_dir,dir,name2)
-        dst_file2=os.path.join(dst_dir,new_name2)
-        print('Move',src_file2)
-        print('To',dst_file2)
-        if os.path.exists(src_file2+'.jpg') and os.path.exists(os.path.exists(src_file2+'.txt')):
-            shutil.move(src_file2+'.jpg',dst_file2+'.jpg')
-            shutil.move(src_file2+'.txt',dst_file2+'.txt')
+def create_val_from_collected_data(src_dir, dst_dir):
+    list_dir = get_list_dir_in_folder(src_dir)
+    count = 0
+    for idx, dir in enumerate(list_dir):
+        count += 1
+        print(count, dir)
+        if (idx < 65):
+            continue
+        name1 = str(random.randint(1, 24))
+        new_name1 = dir[-4:] + '_' + name1
+        src_file1 = os.path.join(src_dir, dir, name1)
+        dst_file1 = os.path.join(dst_dir, new_name1)
+        print('Move', src_file1)
+        print('To', dst_file1)
+        if os.path.exists(src_file1 + '.jpg') and os.path.exists(os.path.exists(src_file1 + '.txt')):
+            shutil.move(src_file1 + '.jpg', dst_file1 + '.jpg')
+            shutil.move(src_file1 + '.txt', dst_file1 + '.txt')
+
+        name2 = str(random.randint(1, 24))
+        new_name2 = dir[-4:] + '_' + name2
+        src_file2 = os.path.join(src_dir, dir, name2)
+        dst_file2 = os.path.join(dst_dir, new_name2)
+        print('Move', src_file2)
+        print('To', dst_file2)
+        if os.path.exists(src_file2 + '.jpg') and os.path.exists(os.path.exists(src_file2 + '.txt')):
+            shutil.move(src_file2 + '.jpg', dst_file2 + '.jpg')
+            shutil.move(src_file2 + '.txt', dst_file2 + '.txt')
+
 
 def gen_blank_image(target_dir, num=150):
     for i in range(num):
-        h=random.randint(32, 150)
-        w=random.randint(int(h/2),int(10*h))
-        print(i,w,h)
+        h = random.randint(32, 150)
+        w = random.randint(int(h / 2), int(10 * h))
+        print(i, w, h)
 
         blank_img = np.zeros([h, w, 3], dtype=np.uint8)
         blank_img.fill(255)
-        cv2.imwrite(os.path.join(target_dir,str(i)+'.jpg'),blank_img)
-        with open(os.path.join(target_dir,str(i)+'.txt'), 'w') as f:
+        cv2.imwrite(os.path.join(target_dir, str(i) + '.jpg'), blank_img)
+        with open(os.path.join(target_dir, str(i) + '.txt'), 'w') as f:
             f.write('')
 
+
 if __name__ == "__main__":
-    # prepare_train_from_icdar(icdar_dir, output_dir)
+    #prepare_train_from_icdar(icdar_dir, output_dir)
+    #fix_unicode('/data/train_data_29k_29Feb_update30Mar/val_printed')
+
     final_list_dir=[]
-    root_dir = '/data/train_data_30k_8Mar_new'
+    root_dir = '/data/train_data_29k_29Feb_update30Mar'
 
-    data_dir = 'cleaned_data_number_box/train'
-    list_dir = get_list_dir_in_folder(os.path.join(root_dir, data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir, dir))
-
-    data_dir='cleaned_data_merge_fixed/train'
-    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir,dir))
-
-    data_dir='cinnamon_data/train'
-    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir,dir))
-
-    final_list_dir.append('blank_images')
-
-    data_dir='augment/add_dots'
-    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir,dir))
-
-    data_dir='augment/add_linedots'
-    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir,dir))
-
-    data_dir='augment/add_solid_line'
-    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir,dir))
-
-    data_dir='augment/add_solid_white_line'
-    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir,dir))
-
-    # data_dir = 'cleaned_data_number_box/test'
-    # list_dir = get_list_dir_in_folder(os.path.join(root_dir, data_dir))
+    # data_dir='cleaned_data_merge_fixed/train'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
     # for dir in list_dir:
-    #     final_list_dir.append(os.path.join(data_dir, dir))
+    #     final_list_dir.append(os.path.join(data_dir,dir))
     #
+    #
+    # data_dir='cinnamon_data/train'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
+    #
+    # final_list_dir.append('blank_images')
+
+    data_dir='cleaned_data_30Mar/test'
+    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    for dir in list_dir:
+        final_list_dir.append(os.path.join(data_dir,dir))
+
     # final_list_dir.append('cinnamon_data/cinamon_test_115')
     #
     # data_dir='cleaned_data_merge_fixed/AICR_test1'
@@ -292,11 +299,17 @@ if __name__ == "__main__":
     #
     # final_list_dir.append('cleaned_data_merge_fixed/AICR_test2')
 
-    prepare_train_test_from_multiple_dir(root_dir, final_list_dir, train_ratio=1.0)
-    #img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
-    #crop_collected_data2(img_dir)
+    #final_list_dir.append('printed_30Mar')
+
+    prepare_train_test_from_multiple_dir(root_dir, final_list_dir, train_ratio=0.0)
+    # img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
+    # crop_collected_data2(img_dir)
     # gen_blank_image('/home/duycuong/PycharmProjects/dataset/blank_images')
     # create_val_from_collected_data('/home/duycuong/PycharmProjects/dataset/cleaned_data_merge_fixed','/home/duycuong/PycharmProjects/dataset/AICR_test2')
     # for dir in list_dir:
     #     crop_collected_data(os.path.join(root_dir,dir))
-    kk=1
+    # kk=1
+    # prepare_train_from_icdar(
+    #     "/data/generated_data_sdv/corpus_500_2020-03-25_18-04/images",
+    #     "/data/generated_data_sdv/crnn-test"
+    # )

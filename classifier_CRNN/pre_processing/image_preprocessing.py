@@ -1,13 +1,23 @@
+import cv2
+import numpy as np
+import random
 import math
 import os
-from datetime import datetime
+import json
 from os import listdir
+from datetime import datetime
+import shutil
 
 import cv2
 import numpy as np
 
-from classifier_CRNN.pre_processing.table_border_extraction_fns import get_h_and_v_line_bbox_CNX, detect_table
-from .image_calibration import calib_image
+try:
+    from pre_processing.table_border_extraction_fns import get_h_and_v_line_bbox_CNX, detect_table
+    #from .image_calibration import calib_image
+except ImportError:
+    from table_border_extraction_fns import get_h_and_v_line_bbox_CNX, detect_table
+    #from image_calibration import calib_image
+
 
 kernel_sharpening = np.array([[0, 0, 0, 0, -1, 0, 0, 0, 0],
                               [0, 0, 0, 0, -1, 0, 0, 0, 0],
@@ -94,6 +104,28 @@ def four_point_transform(image, pts, scaleWunderH=np.sqrt(2)):
     return warped
 
 
+def perspective_transform(image, pts, maxWidth=856, maxHeight=540):
+    pts = np.array(pts, dtype="float32")
+    rect = order_points(pts)
+    (tl, tr, br, bl) = rect
+
+    # now that we have the dimensions of the new image, construct
+    # the set of destination points to obtain a "birds eye view",
+    # (i.e. top-down view) of the image, again specifying points
+    # in the top-left, top-right, bottom-right, and bottom-left
+    # order
+    dst = np.array([
+        [0, 0],
+        [maxWidth - 1, 0],
+        [maxWidth - 1, maxHeight - 1],
+        [0, maxHeight - 1]], dtype="float32")
+
+    # compute the perspective transform matrix and then apply it
+    M = cv2.getPerspectiveTransform(rect, dst)
+    warped = cv2.warpPerspective(image, M, (maxWidth, maxHeight), flags=cv2.INTER_NEAREST)
+    return warped
+
+
 def rotate_image_angle(img, angle, pixel_erase=1):
     shape_ = img.shape
     h_org = shape_[0]
@@ -125,7 +157,7 @@ def flip_image(src, flip):
     return result
 
 
-def invert_image(src):
+def invert_image(src, threshold = 41):
     h, w, c = src.shape
     gray = None
     if (c == 3):
@@ -134,7 +166,7 @@ def invert_image(src):
         gray = src
     # convert to binary
     adaptivethreshold_applied_img = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                          cv2.THRESH_BINARY, 41, 7)
+                                                          cv2.THRESH_BINARY, threshold, 7)
     invert_img = 255 - adaptivethreshold_applied_img
     return invert_img
 
@@ -159,7 +191,7 @@ def erase_img(img, temp, rect, pixel_cal=5, method=cv2.INPAINT_TELEA):
     return dst
 
 
-def auto_rotation(img, expand_angle=5):
+def auto_rotation(img, expand_angle=3):
     gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     h, w = gray_img.shape
     edges = cv2.Canny(gray_img, 50, 150, apertureSize=3)
@@ -352,94 +384,250 @@ class clTemplate_demo:
     def __init__(self):
         self.height = 0
         self.width = 0
+        self.imageSource = 0
         self.name_template = ''
+        self.category = 0
         self.listBoxinfor = []
 
 
 class clImageInfor_demo:
     def __init__(self):
+        self.id = 0
         self.data = None
         self.prefix = ""
+        self.label = ""
         self.type = ""
         self.nameTemplate = ""
         self.location = []
         self.value = ""
         self.value_nlp = ""
+        self.data_type = ""
 
+class clMark_demo:
+    def __init__(self):
+        self.name = None
+        self.id = 0
+        self.type = ""
+        self.location = []
+        self.ischecked = False
+
+class clGroupMark_demo:
+    def __init__(self):
+        self.id = 0
+        self.name = None
+        self.label = ""
+        self.type = ""
+        self.list_mark_info = []
+        self.data_type = ""
 
 def background_subtract(image, bgr_path=''):
-    # image=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # background=cv2.imread(bgr_path, 0)
+    #image=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #background=cv2.imread(bgr_path, 0)
     background = cv2.imread(bgr_path)
     try:
         result = cv2.subtract(background, image)
         result_inv = cv2.bitwise_not(result)
+        #cv2.imwrite('test/bgr_tax_code2.jpg', result_inv)
         # cv2.imshow('result',result_inv)
         # cv2.waitKey(0)
         return result_inv
     except:
         return image
 
+def extract_for_demo_json(img, temp_json, image_directory=None, image_ext='jpg', eraseline=False,
+                          subtract_bgr=False, gen_bgr=False, show_text = False):
+    img_save_bl = img.copy()
+    image_box_border = 1 if image_ext == 'png' else 2
+    data_dict = temp_json
+    template = clTemplate_demo()
+    template.height = data_dict['image_size']['height']
+    template.width  = data_dict['image_size']['width']
+    template.name_template = data_dict['name']
+    template.type =  data_dict['type']
+    template.category = data_dict['category']
+    template.imageSource = data_dict['image_source']
+    dict_fields = data_dict['fields']
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    h_n = img.shape[0]
+    w_n = img.shape[1]
+    ratioy = h_n / template.height
+    ratiox = w_n / template.width
+    list_class_img_info = []
+    list_group_mark = []
+    max_wh_ratio = 1
+    for df in dict_fields:
+        if df['type'] != 'mark':
+            classimginf = clImageInfor_demo()
+            classimginf.id = df['id']
+            classimginf.prefix = df['name']
+            classimginf.label = df['label']
+            classimginf.type = df['type']
+            classimginf.data_type = df['data_type'] if 'data_type' in df else 'text'
+            by = int(df['position']['top'])
+            bx = int(df['position']['left'])
+            ex = bx + int(df['size']['width'])
+            ey = by + int(df['size']['height'])
+            wh_ratio = float(ex - bx) / float(ey - by)
+            # print('wh_ratio',wh_ratio)
+            if wh_ratio > max_wh_ratio:
+                max_wh_ratio = wh_ratio
+            bx = int(bx * ratiox)
+            ex = int(ex * ratiox)
+            by = int(by * ratioy)
+            ey = int(ey * ratioy)
+            classimginf.location = [bx, by, ex, ey]
+            offsetx, offsety = 1, 1
+            if gen_bgr:
+                offsetx, offsety = 0, 0
+            info_img = crop_image(img, bx, by, ex, ey, offsety=offsety, offsetx=offsetx)
+            if gen_bgr and classimginf.prefix=='tax_code': #hard code for tax code in form 4
+                cv2.imwrite('test/bgr_tax_code.jpg', info_img)
+            if subtract_bgr and classimginf.prefix=='tax_code': #hard code for tax code in form 4
+                info_img = background_subtract(info_img, bgr_path='data/SDV_invoices/IV-1_bgr_tax_code.jpg')
+            if eraseline == True:
+                rs = removeLines(info_img, expand_bb=3, pixel_erase=2)
+                if rs is not None:
+                    info_img = rs
+            # print(classimginf.prefix)
+            classimginf.data = info_img
+            list_class_img_info.append(classimginf)
+            print('---------------{0}'.format(classimginf.data_type))
+            if image_directory is not None and classimginf.data_type == 'image':
+                imgcrp = crop_image(img,bx,by,ex,ey)
+                path_save_crop_directory = os.path.join(image_directory, 'crops/')
+                path_save_crop_file = os.path.join(path_save_crop_directory, str(classimginf.id) + '.jpg')
+
+                if not os.path.exists(path_save_crop_directory):
+                    os.umask(0)
+                    os.makedirs(path_save_crop_directory)
+
+                cv2.imwrite(path_save_crop_file, imgcrp)
+                classimginf.value = path_save_crop_file
+                classimginf.value_nlp = path_save_crop_file
+
+            cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), image_box_border)
+            if show_text:
+                cv2.putText(img_save_bl, classimginf.prefix, (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            classimginf.location = [bx, by, ex, ey]
+        else:
+            group_mark = clGroupMark_demo()
+            group_mark.type = df['type']
+            group_mark.name = df['name']
+            group_mark.label = df['label']
+            group_mark.id = df['id']
+            group_mark.data_type = df['data_type']
+            dict_option = df['options']
+            for dopt in dict_option:
+                clmark = clMark_demo()
+                clmark.name = dopt['name']
+                clmark.label = dopt['label']
+                clmark.type = dopt['type']
+                clmark.id   = dopt['id']
+                by = int(dopt['position']['top'])
+                bx = int(dopt['position']['left'])
+                ex = bx + int(dopt['size']['width'])
+                ey = by + int(dopt['size']['height'])
+                bx = int(bx * ratiox)
+                ex = int(ex * ratiox)
+                by = int(by * ratioy)
+                ey = int(ey * ratioy)
+                clmark.location = [bx, by, ex, ey]
+                info_img = crop_image(img, bx, by, ex, ey, offsety=offsety, offsetx=offsetx)
+                # cv2.imshow("mark",info_img)
+                # cv2.waitKey()
+                checked = check_mark(info_img)
+                clmark.ischecked = checked
+                group_mark.list_mark_info.append(clmark)
+                cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), image_box_border)
+                if show_text:
+                    cv2.putText(img_save_bl, clmark.name, (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            list_group_mark.append(group_mark)
+    if image_directory is not None:
+        save_path_rs = os.path.join(image_directory, 'template.{0}'.format(image_ext))
+        cv2.imwrite(save_path_rs, img_save_bl)
+
+    return list_class_img_info, max_wh_ratio , list_group_mark
 
 def gen_image_for_demo(path_image,
-              save_path='/data/data_imageVIB/1/',
-              save_filename='result.jpg',
-              path_config_file='classifier_CRNN/form/template_VIB_page1_demo.txt',
-              eraseline=False, subtract_bgr=True):
+                       temp_json,
+                       save_path='/data/data_imageVIB/1/',
+                       save_filename='result.jpg',
+                       show_text=False):
     if save_path is not None:
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
-
+    data_dict = temp_json
     template = clTemplate_demo()
-    with open(path_config_file, 'r+') as readf:
-        count = 0
-        for line in readf:
-            count += 1
-            if count == 1:
-                template.name_template = line
-            else:
-                list_inf = line.split()
-                if len(list_inf) == 6:
-                    bb_i = [list_inf[0],list_inf[1],int(list_inf[2]), int(list_inf[3]), int(list_inf[2]) + int(list_inf[4]),int(list_inf[3]) + int(list_inf[5])]
-                    template.listBoxinfor.append(bb_i)
-                elif len(list_inf) == 2:
-                    template.height = int(list_inf[0])
-                    template.width = int(list_inf[1])
-    count_img = 0
-    list_class_img_info = []
+    template.height = data_dict['image_size']['height']
+    template.width = data_dict['image_size']['width']
+    template.name_template = data_dict['name']
+    template.type = data_dict['type']
+    template.category = data_dict['category']
+    template.imageSource = data_dict['image_source']
     font = cv2.FONT_HERSHEY_SIMPLEX
     img_bl = cv2.imread(path_image)
-    img_bl = cv2.resize(img_bl, (2480, 3508))
-    img_bl = calib_image(img_bl)
-
-    img_save_bl = img_bl.copy()
+    img_bl = cv2.resize(img_bl, (template.width, template.height))
+    #img_bl = calib_image(img_bl)
+    dict_fields = data_dict['fields']
     h_n = img_bl.shape[0]
     w_n = img_bl.shape[1]
     ratioy = h_n / template.height
     ratiox = w_n / template.width
-    for if_box in template.listBoxinfor:
-        classimginf = clImageInfor_demo()
-        classimginf.prefix = if_box[0]
-        classimginf.type = if_box[1]
-        classimginf.nameTemplate = template.name_template
-        count_img += 1
-        bx = int(if_box[2] * ratiox)
-        by = int(if_box[3] * ratioy)
-        ex = int(if_box[4] * ratiox)
-        ey = int(if_box[5] * ratioy)
-        cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
-        cv2.putText(img_save_bl, if_box[1], (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        classimginf.location = [bx,by,ex,ey]
-        info_img = crop_image(img_bl, bx, by, ex, ey, offsety=1, offsetx=1)
-        if subtract_bgr:
-            info_img = background_subtract(info_img, bgr_path='form/'+if_box[0]+'.jpg')
-        if eraseline == True:
-            rs = removeLines(info_img,expand_bb=3,pixel_erase=2)
-            if rs is not None:
-                info_img = rs
-        classimginf.data = info_img
+    img_save_bl = img_bl.copy()
+    max_wh_ratio = 1
+    for df in dict_fields:
+        if df['type'] != 'mark':
+            classimginf = clImageInfor_demo()
+            classimginf.id = df['id']
+            classimginf.prefix = df['name']
+            classimginf.label = df['label']
+            classimginf.type = df['type']
+            classimginf.data_type = df['data_type'] if 'data_type' in df else 'text'
+            by = int(df['position']['top'])
+            bx = int(df['position']['left'])
+            ex = bx + int(df['size']['width'])
+            ey = by + int(df['size']['height'])
+            wh_ratio = float(ex - bx) / float(ey - by)
+            # print('wh_ratio',wh_ratio)
+            if wh_ratio > max_wh_ratio:
+                max_wh_ratio = wh_ratio
+            bx = int(bx * ratiox)
+            ex = int(ex * ratiox)
+            by = int(by * ratioy)
+            ey = int(ey * ratioy)
+            classimginf.location = [bx, by, ex, ey]
+            offsetx, offsety = 1, 1
+            cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
+            if show_text:
+                cv2.putText(img_save_bl, classimginf.prefix, (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            classimginf.location = [bx, by, ex, ey]
+            # print(classimginf.prefix)
+        else:
+            group_mark = clGroupMark_demo()
+            group_mark.type = df['type']
+            group_mark.name = df['name']
+            group_mark.label = df['label']
+            group_mark.id = df['id']
+            group_mark.data_type = df['data_type']
+            dict_option = df['options']
+            for dopt in dict_option:
+                clmark = clMark_demo()
+                clmark.name = dopt['name']
+                clmark.label = dopt['label']
+                clmark.type = dopt['type']
+                clmark.id = dopt['id']
+                by = int(dopt['position']['top'])
+                bx = int(dopt['position']['left'])
+                ex = bx + int(dopt['size']['width'])
+                ey = by + int(dopt['size']['height'])
+                bx = int(bx * ratiox)
+                ex = int(ex * ratiox)
+                by = int(by * ratioy)
+                ey = int(ey * ratioy)
+                cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
+                if show_text:
+                    cv2.putText(img_save_bl, clmark.name, (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
         save_path_rs = os.path.join(save_path, save_filename)
-        list_class_img_info.append(classimginf)
         cv2.imwrite(save_path_rs, img_save_bl)
 
 def extract_for_demo(listimg, path_config_file, save_to_database=False, eraseline=False, subtract_bgr=True, gen_bgr=False):
@@ -456,11 +644,10 @@ def extract_for_demo(listimg, path_config_file, save_to_database=False, eraselin
                 template.name_template = line
             else:
                 list_inf = line.split()
-                if len(list_inf) == 6:
-                    bb_i = [list_inf[0], list_inf[1], int(list_inf[2]), int(list_inf[3]),
-                            int(list_inf[2]) + int(list_inf[4]), int(list_inf[3]) + int(list_inf[5])]
-                    wh_ratio = float(list_inf[4]) / float(list_inf[5])
-                    #print('wh_ratio',wh_ratio)
+                if len(list_inf) == 5:
+                    bb_i = [list_inf[0], int(list_inf[1]), int(list_inf[2]),
+                            int(list_inf[1]) + int(list_inf[3]), int(list_inf[2]) + int(list_inf[4])]
+                    wh_ratio = float(list_inf[3]) / float(list_inf[4])
                     if wh_ratio > max_wh_ratio:
                         max_wh_ratio = wh_ratio
                     template.listBoxinfor.append(bb_i)
@@ -480,14 +667,17 @@ def extract_for_demo(listimg, path_config_file, save_to_database=False, eraselin
         ratiox = w_n / template.width
         for if_box in template.listBoxinfor:
             classimginf = clImageInfor_demo()
-            classimginf.prefix = if_box[0]
-            classimginf.type = if_box[1]
+            namef, typef, labelf = if_box[0].split('/')
+            classimginf.prefix = namef
+            classimginf.type = typef
+            labelf = labelf.replace('.',' ')
+            classimginf.label = labelf
             classimginf.nameTemplate = template.name_template
             count_img += 1
-            bx = int(if_box[2] * ratiox)
-            by = int(if_box[3] * ratioy)
-            ex = int(if_box[4] * ratiox)
-            ey = int(if_box[5] * ratioy)
+            bx = int(if_box[1] * ratiox)
+            by = int(if_box[2] * ratioy)
+            ex = int(if_box[3] * ratiox)
+            ey = int(if_box[4] * ratioy)
             if save_to_database:
                 cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
                 cv2.putText(img_save_bl, if_box[1], (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
@@ -511,62 +701,100 @@ def extract_for_demo(listimg, path_config_file, save_to_database=False, eraselin
     return list_class_img_info, max_wh_ratio
 
 
-def check_mark(img, scale_box_check=0.7):
-    print("--------------------------------------------------------------------------------------")
-    kernel = np.ones((2, 2), np.uint8)
-    img = cv2.erode(img, kernel, iterations=1)
+def check_mark(img, scale_box_check=0.7,threshold_cf = 0.08, debug = False):
+    # kernel = np.ones((2, 2), np.uint8)
+    # img = cv2.erode(img, kernel, iterations=1)
     img_iv = invert_image(img)
-    cv2.imshow("check", img_iv)
+    h_im = img_iv.shape[0]
+    w_im = img_iv.shape[1]
+
     major = cv2.__version__.split('.')[0]
     if major == '3':
         _, contours, he = cv2.findContours(img_iv, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
     else:
         contours, he = cv2.findContours(img_iv, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-    print(len(contours))
-    # for c in contours:
-    #     x, y, w, h = cv2.boundingRect(c)
-    #     cv2.rectangle(img,(x,y),(x + w, y + h),(0,0,255),1)
-    # cv2.imshow("mark",img)
-    list_contour_rec = []
+    if len(contours) == 0:
+        # print("Uncheckmark")
+        return False
+    if debug == True:
+        img22 = img.copy()
+        img_choice = img.copy()
+        img_cropbb = img.copy()
+        for c in contours:
+            x, y, w, h = cv2.boundingRect(c)
+            cv2.rectangle(img22,(x,y),(x + w, y + h),(0,0,255),1)
+    list_contour_sq = []
     smax = 0
     top_l = None
     btm_r = None
     size_max = None
+
+    smax_sq = 0
+    top_lsq = None
+    btm_rsq  = None
+    size_maxsq = None
+
     for c in contours:
         x, y, w, h = cv2.boundingRect(c)
         if (w > 5 or h > 5):
-            if w * h > smax:
-                smax = w * h
-                top_l = [x, y]
-                btm_r = [x + w, y + h]
-                size_max = [w, h]
-    if size_max[0] / size_max[1] > 1.1 or size_max[0] / size_max[1] < 0.8:
-        print("checked mark")
+            if float(w) / float(h) < 1.1 and float(w) / float(h) > 0.8:
+                if debug == True:
+                    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 1)
+                if w * h > smax:
+                    smax = w * h
+                    top_l = [x, y]
+                    btm_r = [x + w, y + h]
+                    size_max = [w, h]
+                if y > 0 and y < h_im and x > 0 and x < w_im\
+                    and y+h > 0 and y+h < h_im and x + w > 0 and x+w < w_im:
+                    if w * h > smax_sq:
+                        smax_sq = w * h
+                        top_lsq = [x, y]
+                        btm_rsq = [x + w, y + h]
+                        size_maxsq = [w, h]
+
+    if size_max is None and len(contours) > 0:
+        if debug == True:
+            cv2.imshow("crop draw", img_cropbb)
+            cv2.imshow("iv", img_iv)
+            cv2.imshow("img", img)
+            cv2.imshow("imgc", img_choice)
+            cv2.imshow("img22", img22)
+            cv2.waitKey()
+        return True
+    if size_maxsq is not None:
+        top_l = top_lsq
+        btm_r = btm_rsq
+        size_max = size_maxsq
+    if debug == True:
+        cv2.rectangle(img_choice, (top_l[0], top_l[1]), (btm_r[0], btm_r[1]), (0, 0, 255), 1)
+    w_check = size_max[0] * scale_box_check
+    h_check = size_max[1] * scale_box_check
+
+    x_center = top_l[0] + size_max[0] / 2
+    y_center = top_l[1] + size_max[1] / 2
+    top_l_check = [int(x_center - w_check / 2), int(y_center - h_check / 2)]
+    # print(top_l_check)
+    btm_r_check = [int(top_l_check[0] + w_check), int(top_l_check[1] + h_check)]
+    # print(btm_r_check)
+    imcrop_b = crop_image(img_iv, top_l_check[0], top_l_check[1], btm_r_check[0], btm_r_check[1])
+    if debug == True:
+        cv2.rectangle(img_cropbb,(top_l_check[0],top_l_check[1]), (btm_r_check[0],btm_r_check[1]), (0,0,255),1)
+        cv2.imshow("crop draw",img_cropbb)
+        cv2.imshow("iv", img_iv)
+        cv2.imshow("cr",imcrop_b)
+        cv2.imshow("img",img)
+        cv2.imshow("imgc",img_choice)
+        cv2.imshow("img22",img22)
+        cv2.waitKey()
+    numb_w = cv2.countNonZero(imcrop_b)
+    cv2.rectangle(img, (top_l[0], top_l[1]), (btm_r[0], btm_r[1]), (0, 0, 255), 2)
+    cv2.rectangle(img, (top_l_check[0], top_l_check[1]), (btm_r_check[0], btm_r_check[1]), (255, 0, 0), 2)
+    # print("W: ", numb_w)
+    if numb_w / (w_check * h_check) >= threshold_cf:
         return True
     else:
-        w_check = size_max[0] * scale_box_check
-        h_check = size_max[1] * scale_box_check
-        print()
-        x_center = top_l[0] + size_max[0] / 2
-        y_center = top_l[1] + size_max[1] / 2
-        top_l_check = [int(x_center - w_check / 2), int(y_center - h_check / 2)]
-        print(top_l_check)
-        btm_r_check = [int(top_l_check[0] + w_check), int(top_l_check[1] + h_check)]
-        print(btm_r_check)
-        imcrop_b = crop_image(img_iv, top_l_check[0], top_l_check[1], btm_r_check[0], btm_r_check[1])
-        numb_w = cv2.countNonZero(imcrop_b)
-        cv2.rectangle(img, (top_l[0], top_l[1]), (btm_r[0], btm_r[1]), (0, 0, 255), 2)
-        cv2.rectangle(img, (top_l_check[0], top_l_check[1]), (btm_r_check[0], btm_r_check[1]), (255, 0, 0), 2)
-        cv2.imshow("img_", img)
-        cv2.imshow("img_crop_b", imcrop_b)
-        cv2.waitKey()
-        print("W: ", numb_w)
-        if numb_w / (w_check * h_check) >= 0.05:
-            print("checked mark")
-            return True
-        else:
-            print("unchecked mark1")
-            return False
+        return False
 
 
 def removeLines(img, margin=5, expand_bb=2, b_erase_img=True, pixel_erase=3):
@@ -627,6 +855,7 @@ def removeLines(img, margin=5, expand_bb=2, b_erase_img=True, pixel_erase=3):
         return img_cp2
     else:
         return None
+
 
 
 def crop_fit_text(img, expand=5):
@@ -793,58 +1022,60 @@ def store_data_handwriting_table(path, save_path, expand_y=0):
                     cv2.imwrite(save_path_img, info_img)
     print("finished !!")
 
+def test_jpg():
+    img_raw=cv2.imread('/home/aicr/cuongnd/aicr.core/test/template_4.png')
+    cv2.imwrite('/home/aicr/cuongnd/aicr.core/test/template_4.jpg',img_raw)
+
+def convertTXT2JSON(path_txt, path_json):
+    list_dict_json = []
+    id = 1
+    with open(path_txt,mode = 'r+',encoding='utf-8') as readf:
+        for line in readf:
+            dict_feilds = {}
+            dict_pos = {}
+            dict_size = {}
+            line_str = line.split()
+            dict_feilds['id'] = id
+            namef, typef, labelf = line_str[0].split('/')
+            dict_feilds['name'] = namef
+            dict_feilds['type'] = typef
+            labelf = labelf.replace('.',' ')
+            dict_feilds['label'] = labelf
+            dict_pos['left'] = int(line_str[1])
+            dict_pos['top'] = int(line_str[2])
+            dict_feilds['position'] = dict_pos
+            dict_size['width'] = int(line_str[3])
+            dict_size['height'] = int(line_str[4])
+            dict_feilds['size'] = dict_size
+            list_dict_json.append(dict_feilds)
+    with open(path_json,mode = 'w',encoding='utf-8') as fout:
+        json.dump(list_dict_json, fout,ensure_ascii= False,  indent=2, separators=(',', ': '))
 
 if __name__ == "__main__":
-    # list_img = []
-    # img = cv2.imread("C:/Users/chungnx/Desktop/img_user/0001.jpg")
-    # list_img.append(img)
-    # img = cv2.imread("2020-02-25_16-00/NAME1.jpg")
-    # list_img.append(img)
-    # img2 = augment_random_erase(img,5)
-    # cv2.imshow("img2 ",img2)
-    # cv2.waitKey()
-    # img2 = four_point_transform(img, [[94, 79], [953, 65], [959, 1258], [102, 1257]])
-    # cv2.imwrite("im2.jpg", img2)
-    # augumentation_image(img,3)
-    # gen_data_path("/data/dataset/cinnamon_data/0916_DataSamples/","/data/dataset/cinnamon_data")
-    # gen_data_path("/data/dataset/cinnamon_data/1015_Private Test/", "/data/dataset/cinnamon_data")
-    # extract_for_demo(list_img,"template_VIB_page1.txt","",True)
-    # path = "C:/Users/chungnx/Desktop/checked_mark.jpg"
-    # img = cv2.imread(path)
-    # check_mark(img)
-    path = "C:/Users/chungnx/Desktop/check_mark"
-    path_bg = "C:/Users/chungnx/Desktop/background_img/shk.jpg"
-    list_img = list_files1(path, "jpg")
-    list_img += list_files1(path, "png")
-    img_bg = cv2.imread(path_bg)
-    for l in list_img:
-        path_img = os.path.join(path, l)
-        img = cv2.imread(path_img)
-        check_mark(img)
-        cv2.waitKey()
-    # path = "C:/Users/chungnx/Desktop/IMG_20200303_091222.jpg"
-    # img = cv2.imread(path)
-    # img_bl = auto_rotation(img)
-    # feature1 = "C:/Users/chungnx/Desktop/temp_standart/feature1.jpg"
-    # feature2 = "C:/Users/chungnx/Desktop/temp_standart/feature2.jpg"
-    # temp = cv2.imread(feature1)
-    # coor_1 = get_coor_match_template(img_bl,temp,type_img = 1)
-    # temp = cv2.imread(feature2)
-    # coor_2 = get_coor_match_template(img_bl,temp,type_img = 1)
-    # img_bl2 = img_bl.copy()
-    # # coor_3 = get_coor_match_template(img, temp)
-    # cv2.rectangle(img_bl2, (coor_1[0], coor_1[1]), (coor_1[2], coor_1[3]),(0, 0, 255),3)
-    # cv2.rectangle(img_bl2, (coor_2[0], coor_2[1]), (coor_2[2], coor_2[3]), (0, 0, 255), 3)
-    #     # cv2.imwrite("img_bl2.jpg",img_bl2)
-    #     # fp = [[coor_1[0], coor_1[1]], [coor_1[2], coor_1[1]], [coor_2[0], coor_2[3]], [coor_2[2], coor_2[3]]]
-    #     # img_4 = img_per = four_point_transform(img_bl,fp)
-    #     # cv2.imwrite("img_4.jpg",img_4)
-    #     # top_left = [coor_1[0],coor_1[1]]
-    #     # top_right = [coor_1[2],coor_1[1]]
-    #     # bt_left = [coor_3[0],coor_3[3]]
-    #     # cv2.imwrite("imgrs.jpg",img)
-    #     # cv2.waitKey()
-    #     # path_configfile = "venv/template_data.txt"
-    #     # path_save = "C:/Users/chungnx\Desktop/aicr_data_hw/image_crop"
-    #     # store_data_handwriting_table(path_img,path_save,0)
-    #     # crop_fit_text(img)
+    test_jpg()
+    # path = 'C:/Users/chungnx/Desktop/test'
+    # list_file = list_files1(path,'jpg')
+    # list_file += list_files1(path,'png')
+    # for pimg in list_file:
+    #     path_img = os.path.join(path,pimg)
+    #     img = cv2.imread(path_img)
+    #     img_r = auto_rotation(img,2)
+    #     path_img = path_img.replace('.','r.')
+    #     cv2.imwrite(path_img, img_r)
+
+    # img_test = cv2.resize(img_test, (2480, 3508))
+    # img_calib = calib_image(img_test)
+    # # cv2.imwrite("img_cal.jpg",img_calib)
+    # f = open("C:/Users/chungnx/PycharmProjects/aicr.core/classifier_CRNN/form/template.json", mode='r', encoding='utf-8')
+    # json_content = f.read()
+    # list_clImageInfor_demo, max_wh,lis_mark = extract_for_demo_json(img_calib,json_content , eraseline=False,\
+    #                                                   subtract_bgr=False, gen_bgr=False)
+    # list_img = list_files1(path, "jpg")
+    # list_img += list_files1(path, "png")
+    # img_bg = cv2.imread(path_bg)
+    # for l in list_img:
+    #     path_img = os.path.join(path, l)
+    #     img = cv2.imread(path_img)
+    #     check_mark(img)
+    #     cv2.waitKey()
+
