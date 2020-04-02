@@ -264,8 +264,26 @@ def gen_blank_image(target_dir, num=150):
         with open(os.path.join(target_dir, str(i) + '.txt'), 'w') as f:
             f.write('')
 
+def remove_unsuitable_samples(dir, alphabet_path='../data/char_237'):
+    alphabet = open(alphabet_path, encoding='utf8').read().rstrip()
+    list_file = get_list_file_in_folder(dir)
+    for file in list_file:
+        anno_path = os.path.join(dir,file.replace('.jpg','.txt').replace('.png','.txt'))
+        anno_txt = open(anno_path, encoding='utf8').read().rstrip()
+        error=False
+        for ch in anno_txt:
+            if ch not in alphabet:
+                print(ch)
+                error = True
+        if error:
+            print
+            print(file)
+            print(anno_txt)
 
 if __name__ == "__main__":
+    remove_unsuitable_samples('../data')
+
+
     #prepare_train_from_icdar(icdar_dir, output_dir)
     #fix_unicode('/data/train_data_29k_29Feb_update30Mar/val_printed')
 
@@ -301,7 +319,7 @@ if __name__ == "__main__":
 
     #final_list_dir.append('printed_30Mar')
 
-    prepare_train_test_from_multiple_dir(root_dir, final_list_dir, train_ratio=0.0)
+    #prepare_train_test_from_multiple_dir(root_dir, final_list_dir, train_ratio=0.0)
     # img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
     # crop_collected_data2(img_dir)
     # gen_blank_image('/home/duycuong/PycharmProjects/dataset/blank_images')

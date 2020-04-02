@@ -18,14 +18,14 @@ ckpt_prefix = 'AICR_SDV_30Mar_No_update_hw'
 
 #test
 test_dir='/home/aicr/cuongnd/text_recognition/data/handwriting/hokhau'
-test_dir='/home/aicr/cuongnd/data'
+test_dir='data'
 pretrained_test='outputs/train_2020-03-30_18-38/AICR_SDV_30Mar_No_update_hw_300_loss_1.25_cer_0.0076.pth'
 pretrained_test='ckpt/AICR_SDV_30Mar_300_loss_1.25_cer_0.0076.pth'
 #for testing SDV printing character cases
 label = False
 test_list=''
 
-gpu_test = '1'
+gpu_test = '0'
 #gpu_test = None
 workers_test=8
 batch_size_test= 1

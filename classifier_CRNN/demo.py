@@ -22,7 +22,7 @@ workers = config_crnn.workers_test
 batch_size = config_crnn.batch_size_test
 label = config_crnn.label
 debug = True
-alphabet = open(alphabet_path).read().rstrip()
+alphabet = open(alphabet_path, encoding='utf8').read().rstrip()
 nclass = len(alphabet) + 1
 nc = 3
 mean = [0.485, 0.456, 0.406]
