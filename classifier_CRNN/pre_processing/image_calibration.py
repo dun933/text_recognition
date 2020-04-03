@@ -4,18 +4,29 @@ import numpy as np
 
 RADIAN_PER_DEGREE = 0.0174532
 
-
 class Template_info:
-    def __init__(self, name, template_path, field_dir, field_imgs, field_locs, field_rois_extend=1.0, field_rois=None,
-                 confidence=0.7, scales=(0.6, 1.2, 0.2), rotations=(-10, 10, 5), debug=False):
+    def __init__(self, name, template_path, field_dir, field_imgs_with_locs, field_pos=None, field_rois_extend=1.0, field_rois=None,
+                 confidence=0.7, scales=(0.9, 1.1, 0.1), rotations=(-2, 2, 2), debug=False):
         self.name = name
         self.template_img = cv2.imread(template_path, 0)
         self.template_width = self.template_img.shape[1]
         self.template_height = self.template_img.shape[0]
         self.field_dir = field_dir
         self.confidence = confidence
-        self.field_imgs = field_imgs
-        self.field_locs = field_locs
+        self.field_imgs = []
+        self.field_locs = []
+        self.field_pos = None
+        if field_pos is not None:
+            self.field_pos = field_pos
+
+        if field_imgs_with_locs is not None:
+            for field in field_imgs_with_locs:
+                self.field_imgs.append(field[0])
+                self.field_locs.append(field[1])
+        else:
+            for idx, pos in field_pos:
+                self.field_imgs.append(str(idx))
+                self.field_imgs.append(str(idx))
         self.field_rois_extend = field_rois_extend
         self.field_rois = field_rois
         self.debug = debug
@@ -24,27 +35,36 @@ class Template_info:
             field = dict()
             field['dir'] = field_dir
             field['name'] = img
-            field['loc'] = field_locs[idx]
+            field['loc'] = self.field_locs[idx]
             field['roi'] = None
             if field_rois is not None:
                 field['roi'] = field_rois[idx]
             else:
-                field_img = cv2.imread(os.path.join(self.field_dir, img), 0)
+                if field_imgs_with_locs is not None:
+                    field_img = cv2.imread(os.path.join(self.field_dir, img), 0)
+                else:
+                    field_img = cv2.imread(os.path.join(self.field_dir, img), 0)
+
                 field_w = max(field_img.shape[1], 100)
                 field_h = max(field_img.shape[0], 100)
                 extend_x = int(field_rois_extend * field_w)
                 extend_y = int(field_rois_extend * field_h)
-                left = max(int(field_locs[idx][0] - field_w / 2 - extend_x), 0)
-                top = max(int(field_locs[idx][1] - field_h / 2 - extend_y), 0)
-                right = min(int(field_locs[idx][0] + field_w / 2 + extend_x), self.template_width)
-                bottom = min(int(field_locs[idx][1] + field_h / 2 + extend_y), self.template_height)
+                left = max(int(self.field_locs[idx][0] - field_w / 2 - extend_x), 0)
+                top = max(int(self.field_locs[idx][1] - field_h / 2 - extend_y), 0)
+                right = min(int(self.field_locs[idx][0] + field_w / 2 + extend_x), self.template_width)
+                bottom = min(int(self.field_locs[idx][1] + field_h / 2 + extend_y), self.template_height)
                 width = right - left
                 height = bottom - top
                 field['roi'] = [left, top, width, height]
-                # field['roi'] = [0, 0, self.template_width, self.template_height]
 
             self.createSamples(field, scales, rotations)
             self.list_field_samples.append(field)
+
+    def crop_image(self, input_img, bbox=[905, 1010, 1300, 138], offset_x = 0, offset_y = 0):
+        print('crop')
+        crop_img = input_img[bbox[1] + offset_y:bbox[1] + bbox[3] + offset_y,
+                   bbox[0] + offset_x:bbox[0] + bbox[2] + offset_x]
+        return crop_img
 
     def createSamples(self, field, scales, rotations):
         print('Add_template', field['name'])
@@ -106,7 +126,6 @@ class Template_info:
 
             # (h_rot, w_rot) = rotated.shape[:2]
             # (cX_rot, cY_rot) = (w_rot // 2, h_rot // 2)
-            #
             # pt1=(int(cX_rot-3), int(cY_rot-3))
             # pt2=(int(cX_rot+3), int(cY_rot+3))
             # pt3=(int(cX_rot-3), int(cY_rot+3))
@@ -150,36 +169,64 @@ class MatchingTemplate:
         self.add_template(template_name='VIB_form',
                           template_path=template_dir + '/template_VIB/0001_ori.jpg',
                           field_dir=template_dir + '/template_VIB',
-                          field_imgs=['field1.jpg', 'field3.jpg', 'field4.jpg'],
-                          field_locs=[[258.5, 330.5], [2125.0, 2423.5], [229.5, 3318.0]],
-                          field_rois=None)
+                          field_imgs_with_locs=[('field1.jpg', [258.5, 330.5]), ('field3.jpg', [2125.0, 2423.5]), ('field4.jpg',[229.5, 3318.0])],
+                          #field_locs=[, , [229.5, 3318.0]],
+                          field_rois=None,
+                          field_rois_extend=1.0,
+                          confidence=0.7,
+                          scales=(0.9, 1.1, 0.1),
+                          rotations=(-2, 2, 2))
 
         # self.add_template(template_name='CMND_old',
         #                   template_path=template_dir + '/template_IDcard/2_ori.jpg',
         #                   field_dir=template_dir + '/template_IDcard',
         #                   field_imgs=['template_1.jpg', 'template_2.jpg', 'template_3.jpg', 'template_4.jpg'],
         #                   field_locs=[[141.0, 111.5], [343.0, 93.5], [737.0, 66.0], [324.5, 343.0]],
-        #                   #field_imgs=['template_1.jpg', 'template_3.jpg', 'template_4.jpg'],
-        #                   #field_locs=[[141.0, 111.5], [737.0, 66.0], [324.5, 343.0]],
         #                   field_rois=None,
-        #                   field_rois_extend=2.0)
+        #                   field_rois_extend=2.0,
+        #                   confidence=0.7,
+        #                   scales=(0.6, 1.2, 0.2),
+        #                   rotations=(-10, 10, 5))
 
-    def add_template(self, template_name, template_path, field_dir, field_imgs, field_locs, field_rois,
-                     field_rois_extend=1.0, confidence=0.7, scales=(0.7, 1.1, 0.1), rotations=(-6, 6, 2), debug=False):
-        temp = Template_info(template_name, template_path, field_dir, field_imgs, field_locs, field_rois_extend,
+    def add_template(self, template_name, template_path, field_dir, field_imgs_with_locs, field_rois,
+                     field_rois_extend=1.0, confidence=0.7, scales=(0.9, 1.1, 0.1), rotations=(-2, 2, 2), debug=False):
+        temp = Template_info(template_name, template_path, field_dir, field_imgs_with_locs, field_rois_extend,
                              field_rois, confidence, scales, rotations, debug)
         self.template_list.append(temp)
 
-    def find_field(self, input_img, template, thres=0.7, method='cv2.TM_CCORR_NORMED'):
-        res = cv2.matchTemplate(input_img, template, 3)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        pos = None
-        if max_val > thres:
-            pos = max_loc
-        return max_val, pos[0] + template.shape[1] / 2, pos[1] + template.shape[0] / 2
+    def clear_template(self):
+        self.template_list.clear()
 
-    def calib_template(self, template_name, src_img, target_path='',
-                       debug=False, fast=False):  # src_img is cv2 image
+    def find_field(self, input_img, field, thres=0.7, fast =True, method ='cv2.TM_CCORR_NORMED'):
+        max_conf = 0
+        final_locx, final_locy = -1, -1
+        scale, rotation = 1.0, 0
+
+        if len(input_img.shape) == 3:  # BGR
+            input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+
+        if fast:
+            left = field['roi'][0]
+            top = field['roi'][1]
+            right = field['roi'][0] + field['roi'][2]
+            bottom = field['roi'][1] + field['roi'][3]
+            input_img = input_img[top:bottom, left:right]
+
+        for sample in field['list_samples']:
+            sample_data = sample['data']
+            res = cv2.matchTemplate(input_img, sample_data, 3)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            if max_val > max_conf and max_val>thres:
+                max_conf = max_val
+                final_locx, final_locy = max_loc[0] + sample_data.shape[1] / 2, max_loc[1] + sample_data.shape[0] / 2
+                scale, rotation = sample['scale'], sample['rotation']
+        if fast:
+            final_locx, final_locy = final_locx + field['roi'][0], final_locy + field['roi'][1]
+        print('Score:', round(max_conf, 4), 'Scale:', scale, 'Angle:', rotation,
+              'Location:', final_locx, final_locy)
+        return max_conf, final_locx, final_locy
+
+    def calib_template(self, template_name, src_img, fast=True):  # src_img is cv2 image
         print('\nCalib template', template_name)
         template_data = None
         for template in self.template_list:
@@ -189,52 +236,16 @@ class MatchingTemplate:
         if template_data is None:
             print('Cannot find template', template_name, 'in database')
             return
+        src_img = cv2.resize(src_img, (template_data.template_width, template_data.template_height))
         gray_img = src_img
         if len(src_img.shape) == 3:  # BGR
             gray_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
         list_pts = []
-        if fast:
-            for idx, field in enumerate(template_data.list_field_samples):
-                print(field['name'])
-                max_conf = 0
-                final_locx, final_locy = -1, -1
-                scale, rotation = 1.0, 0
 
-                left = field['roi'][0]
-                top = field['roi'][1]
-                right = field['roi'][0] + field['roi'][2]
-                bottom = field['roi'][1] + field['roi'][3]
-                crop_img = gray_img[top:bottom, left:right]
-
-                for sample in field['list_samples']:
-                    sample_data = sample['data']
-                    conf, locx, locy = self.find_field(crop_img, sample_data)
-                    # print(conf, sample['scale'], sample['rotation'])
-                    if conf > max_conf:
-                        max_conf = conf
-                        final_locx, final_locy = locx, locy
-                        scale, rotation = sample['scale'], sample['rotation']
-                final_locx, final_locy = final_locx + left, final_locy + top
-                print('Score:', round(max_conf, 4), 'Scale:', scale, 'Angle:', rotation, 'Location:', final_locx,
-                      final_locy)
-                list_pts.append((final_locx, final_locy))
-        else:
-            for idx, field in enumerate(template_data.list_field_samples):
-                print(field['name'])
-                max_conf = 0
-                final_locx, final_locy = -1, -1
-                scale, rotation = 1.0, 0
-                for sample in field['list_samples']:
-                    sample_data = sample['data']
-                    conf, locx, locy = self.find_field(gray_img, sample_data)
-                    print(conf, sample['scale'], sample['rotation'])
-                    if conf > max_conf:
-                        max_conf = conf
-                        final_locx, final_locy = locx, locy
-                        scale, rotation = sample['scale'], sample['rotation']
-                print(scale, rotation)
-                print(final_locx, final_locy)
-                list_pts.append((final_locx, final_locy))
+        for idx, field in enumerate(template_data.list_field_samples):
+            print(field['name'])
+            conf, loc_x, loc_y = self.find_field(gray_img, field, fast=fast, thres=template_data.confidence)
+            list_pts.append((loc_x, loc_y))
 
         src_pts = np.asarray(list_pts, dtype=np.float32)
         dst_pts = np.asarray(template_data.field_locs, dtype=np.float32)
@@ -248,10 +259,8 @@ class MatchingTemplate:
             trans_img = cv2.warpPerspective(src_img, perspective_trans, (w, h))
         return trans_img
 
-    def crop_image(self, input_img, bbox=[905, 1010, 1300, 138]):
+    def crop_image(self, input_img, bbox=[905, 1010, 1300, 138], offset_x = 0, offset_y = 0):
         print('crop')
-        offset_x = 0
-        offset_y = 0
         crop_img = input_img[bbox[1] + offset_y:bbox[1] + bbox[3] + offset_y,
                    bbox[0] + offset_x:bbox[0] + bbox[2] + offset_x]
         return crop_img
@@ -268,18 +277,18 @@ class MatchingTemplate:
 
 
 if __name__ == "__main__":
-    src_img = cv2.imread('../../data/IDcard/CMND_old_1/13.jpg')
-    src_img = cv2.imread('../../data/IDcard/CMND_old_1/13.jpg')
+    src_img = cv2.imread('../form/template_VIB/0001_ori.jpg')
+    src_img = cv2.imread('../../data/VIB_page1/vib_page1-07.jpg')
     match = MatchingTemplate()
 
     begin = time.time()
-    calib_img = match.calib_template('CMND_old', src_img)
+    calib_img = match.calib_template('VIB_form', src_img, fast=True)
     end = time.time()
     print('Time:', end - begin, 'seconds')
 
     debug = True
     if debug:
-        trans_img = cv2.resize(calib_img, (int(calib_img.shape[1] / 1), int(calib_img.shape[0] / 1)))
+        trans_img = cv2.resize(calib_img, (int(calib_img.shape[1] / 4), int(calib_img.shape[0] / 4)))
         cv2.imshow('origin', src_img)
         cv2.imshow('transform', trans_img)
         cv2.waitKey(0)
