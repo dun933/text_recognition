@@ -2,21 +2,23 @@ import cv2
 import numpy as np
 
 
-def visualize_boxes(path_config_file, img, debug=False):
+def visualize_boxes(path_config_file, img, debug=False, offset_x=0, offset_y=0):
     try:
         with open(path_config_file, 'r+') as readf:
             count = 0
             for line in readf:
                 count += 1
                 list_inf = line.split()
-                if len(list_inf) == 6:
-                    bb = [int(list_inf[2]), int(list_inf[3]), int(list_inf[2]) + int(list_inf[4]),
-                          int(list_inf[3]) + int(list_inf[5])]
-                    wh_ratio = float(list_inf[4]) / float(list_inf[5])
+                if len(list_inf) == 5:
+                    last_idx = len(list_inf) - 1
+                    bb = [int(list_inf[last_idx - 3]), int(list_inf[last_idx - 2]),
+                          int(list_inf[last_idx - 3]) + int(list_inf[last_idx - 1]),
+                          int(list_inf[last_idx - 2]) + int(list_inf[last_idx])]
+                    wh_ratio = float(list_inf[last_idx - 1]) / float(list_inf[last_idx])
                     # print(count, list_inf[0], 'wh_ratio', wh_ratio)
                     # cv2.putText(img, list_inf[0], (bb[0], bb[1] - 4), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2,
                     #            cv2.LINE_AA)
-                    cv2.rectangle(img, (bb[0], bb[1]), (bb[2], bb[3]), (0, 0, 255), 2)
+                    cv2.rectangle(img, (bb[0] + offset_x, bb[1] + offset_y), (bb[2]+ offset_x, bb[3]+ offset_y), (0, 0, 255), 2)
     except:
         pass
 
@@ -60,6 +62,8 @@ def visualize_boxes_json(temp_json, img, debug=False):
 
 
 import os
+
+
 def erose(root_dir, img_list):
     for img_path in img_list:
         img_path = os.path.join(root_dir, img_path)
@@ -74,8 +78,8 @@ def erose(root_dir, img_list):
 
 
 if __name__ == "__main__":
-    img = cv2.imread('template_VIB/0001_ori.jpg')
-    # visualize_boxes('template_VIB_page1.txt', img, debug=True)
-    root_dir = 'background_VIB'
-    img_list = ['6.jpg', '11.jpg', '12.jpg', '38.jpg']
-    erose(root_dir, img_list)
+    img = cv2.imread('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/001_template.jpg')
+    visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/001.txt', img, debug=True)
+    # root_dir = 'background_VIB'
+    # img_list = ['6.jpg', '11.jpg', '12.jpg', '38.jpg']
+    # erose(root_dir, img_list)

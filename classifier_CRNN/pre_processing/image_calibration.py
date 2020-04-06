@@ -1,12 +1,13 @@
 import time, os
 import cv2, math
 import numpy as np
+from form.form_processing import visualize_boxes
 
 RADIAN_PER_DEGREE = 0.0174532
 debug = False
 
 
-def draw_bboxes(img, bboxes):
+def draw_bboxes(img, bboxes, window_name='draw bboxes'):
     # e.g: bboxes= [(0,0),(0,5),(5,5),(5,0)]
     if len(img.shape) != 3:
         img_RGB = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
@@ -19,8 +20,8 @@ def draw_bboxes(img, bboxes):
         cv2.line(img_RGB, bbox[2], bbox[3], color=color_red, thickness=2)
         cv2.line(img_RGB, bbox[3], bbox[0], color=color_red, thickness=2)
 
-    img_RGB = cv2.resize(img_RGB, (int(img_RGB.shape[1] / 3), int(img_RGB.shape[0] / 3)))
-    cv2.imshow('draw bboxes', img_RGB)
+    img_RGB = cv2.resize(img_RGB, (int(img_RGB.shape[1] / 2), int(img_RGB.shape[0] / 2)))
+    cv2.imshow(window_name, img_RGB)
     cv2.waitKey(0)
 
 
@@ -29,6 +30,7 @@ class Template_info:
                  confidence=0.7, scales=(0.9, 1.1, 0.1), rotations=(-2, 2, 2), normalize_width=1654):
         self.name = name
         self.template_img = cv2.imread(template_path, 0)
+
         self.resize_ratio, self.template_img = self.resize_normalize(self.template_img, normalize_width)
         self.template_width = self.template_img.shape[1]
         self.template_height = self.template_img.shape[0]
@@ -51,7 +53,6 @@ class Template_info:
             else:
                 field['data'] = self.crop_image(self.template_img, bbox)
                 # cv2.imwrite(field['name']+'.jpg', field['data'])
-                # cv2.waitKey(0)
                 field_w = max(field['data'].shape[1], 80)
                 field_h = max(field['data'].shape[0], 80)
                 extend_x = int(field_rois_extend * field_w)
@@ -181,7 +182,7 @@ class Template_info:
                 field['list_samples'].append(temp)
 
     def draw_template(self):
-        list_bboxes =[]
+        list_bboxes = []
         for bbox in self.field_bboxes:
             left = bbox[0]
             top = bbox[1]
@@ -201,14 +202,24 @@ class MatchingTemplate:
         self.matching_results = []
 
     def initTemplate(self, template_dir='../form', list_template_name=[]):
-        self.add_template(template_name='VIB_form',
-                          template_path=template_dir + '/template_VIB/0001_ori.jpg',
-                          field_bboxes=[[96, 157, 222, 108], [1320, 1595, 192, 42], [96, 2170, 98, 104]],
-                          field_rois_extend=1.0,
-                          field_search_areas=None,
-                          confidence=0.7,
-                          scales=(0.9, 1.1, 0.1),
-                          rotations=(-2, 2, 2))
+        print('Init template')
+        # self.add_template(template_name='VIB_form',
+        #                   template_path=template_dir + '/template_VIB/0001_ori.jpg',
+        #                   field_bboxes=[[96, 157, 222, 108], [1320, 1595, 192, 42], [96, 2170, 98, 104]],
+        #                   field_rois_extend=1.0,
+        #                   field_search_areas=None,
+        #                   confidence=0.7,
+        #                   scales=(0.9, 1.1, 0.1),
+        #                   rotations=(-2, 2, 2))
+
+        # self.add_template(template_name='006',
+        #                   template_path='../../data/SDV_invoices_mod/006_template.jpg',
+        #                   field_bboxes=[[78, 136, 292, 92], [1197, 89, 262, 116], [556, 413, 268, 102]],
+        #                   field_rois_extend=1.0,
+        #                   field_search_areas=None,
+        #                   confidence=0.7,
+        #                   scales=(0.9, 1.1, 0.1),
+        #                   rotations=(-2, 2, 2))
 
         # self.add_template(template_name='CMND_old',
         #                   template_path=template_dir + '/template_IDcard/2_ori.jpg',
@@ -251,19 +262,20 @@ class MatchingTemplate:
         final_locx, final_locy = -1, -1
         final_sample = None
 
+        process_img = input_img.copy()
         if len(input_img.shape) == 3:  # BGR
-            input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+            process_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
 
         if fast:
             left = field['search_area'][0]
             top = field['search_area'][1]
             right = field['search_area'][0] + field['search_area'][2]
             bottom = field['search_area'][1] + field['search_area'][3]
-            input_img = input_img[top:bottom, left:right]
+            process_img = input_img[top:bottom, left:right]
 
         for sample in field['list_samples']:
             sample_data = sample['data']
-            res = cv2.matchTemplate(input_img, sample_data, 3)
+            res = cv2.matchTemplate(process_img, sample_data, 3)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
             if max_val > max_conf and max_val > thres:
                 max_conf = max_val
@@ -299,7 +311,7 @@ class MatchingTemplate:
         ry4 = round((y0 + (x1 - x0) * sa + (y2 - y0) * ca))
 
         self.matching_results = [(rx1, ry1), (rx2, ry2), (rx3, ry3), (rx4, ry4)]
-        draw_bboxes(input_img, [self.matching_results])
+        draw_bboxes(input_img, [self.matching_results], field['name'])
 
         return max_conf, final_locx, final_locy
 
@@ -314,6 +326,8 @@ class MatchingTemplate:
         if len(src_img.shape) == 3:  # BGR
             gray_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
         list_pts = []
+
+        cv2.imwrite('test.jpg', gray_img)
 
         for idx, field in enumerate(template_data.list_field_samples):
             print(field['name'])
@@ -348,27 +362,43 @@ class MatchingTemplate:
         cv2.waitKey(0)
         return result_inv
 
-
-if __name__ == "__main__":
-    src_img = cv2.imread('../form/template_VIB/0001_ori.jpg')
-    src_img = cv2.imread('../../data/VIB_page1/vib_page1-12.jpg')
+def test_calib():
+    src_img_path = '../../data/SDV_invoices_mod/006_4.jpg'
+    src_img = cv2.imread(src_img_path)
     begin_init = time.time()
     match = MatchingTemplate()
+    match.add_template(template_name='006',
+                       template_path='../../data/SDV_invoices_mod/006_template.jpg',
+                       field_bboxes=[[78, 136, 292, 92], [1106, 112, 156, 140], [1182, 1754, 242, 120]],
+                       field_rois_extend=1.0,
+                       field_search_areas=None,
+                       confidence=0.3,
+                       scales=(0.9, 1.1, 0.1),
+                       rotations=(-2, 2, 2))
+    match.draw_template('006')
     end_init = time.time()
     print('Time init:', end_init - begin_init, 'seconds')
 
-    match.draw_template('VIB_form')
+    match.draw_template('006')
 
     begin = time.time()
-    calib_img = match.calib_template('VIB_form', src_img, fast=True)
+    calib_img = match.calib_template('006', src_img, fast=True)
     end = time.time()
     print('Time:', end - begin, 'seconds')
 
     debug = True
     if debug:
-        src_img = cv2.resize(src_img, (int(src_img.shape[1] / 2), int(src_img.shape[0] / 2)))
-        trans_img = cv2.resize(calib_img, (int(calib_img.shape[1] / 2), int(calib_img.shape[0] / 2)))
-        cv2.imshow('origin', src_img)
-        cv2.imshow('transform', trans_img)
+        src_img_with_box = visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/006.txt', src_img,
+                                           debug=False, offset_x=-20, offset_y=-20)
+        src_img_with_box = cv2.resize(src_img_with_box, (int(src_img.shape[1] / 2), int(src_img.shape[0] / 2)))
+        cv2.imshow('src with boxes', src_img_with_box)
+        trans_img_with_box = visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/006.txt',
+                                             calib_img, debug=False, offset_x=-20, offset_y=-20)
+        trans_img_with_box = cv2.resize(trans_img_with_box, (int(calib_img.shape[1] / 2), int(calib_img.shape[0] / 2)))
+        cv2.imshow('transform_with_boxes', trans_img_with_box)
+        cv2.imwrite(src_img_path.replace('.jpg', '_transform.jpg'), trans_img_with_box)
         cv2.waitKey(0)
-        # cv2.imwrite(target_path.replace('.jpg', '_transform.jpg'), trans_img)
+
+
+if __name__ == "__main__":
+    test_calib()
