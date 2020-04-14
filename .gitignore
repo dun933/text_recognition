@@ -1,6 +1,7 @@
 workspace/
 demo_results/
 warp-ctc/
+coco/
 
 #CRAFT-pytorch
 *.pyc
