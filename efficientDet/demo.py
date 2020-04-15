@@ -12,20 +12,21 @@ import argparse
 import copy
 from utils import vis_bbox, EFFICIENTDET
 
-#pip install git+https://github.com/waleedka/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI
+# pip install git+https://github.com/waleedka/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI
 
-#python3 demo.py --weight weights/checkpoint_VOC_efficientdet-d0_268.pth --threshold 0.6 --iou_threshold 0.5 --cam --score
+# python3 demo.py --weight weights/checkpoint_VOC_efficientdet-d0_268.pth --threshold 0.6 --iou_threshold 0.5 --cam --score
 
-network='efficientdet-d0'
-ckpt='weights/checkpoint_VOC_efficientdet-d0_268.pth'
-threshold= 0.6
-iou_threshold= 0.5
+network = 'efficientdet-d0'
+ckpt = 'weights/checkpoint_VOC_efficientdet-d0_268.pth'
+threshold = 0.9
+iou_threshold = 0.8
+size_img = 512
 
 parser = argparse.ArgumentParser(description='EfficientDet')
 
 parser.add_argument('-n', '--network', default=network,
                     help='efficientdet-[d0, d1, ..]')
-parser.add_argument('-s', '--score', default=True,
+parser.add_argument('-s', '--score', default=False,
                     action="store_true", help='Show score')
 parser.add_argument('-t', '--threshold', default=threshold,
                     type=float, help='Visualization threshold')
@@ -47,14 +48,14 @@ class Detect(object):
         dir_name: Folder or image_file
     """
 
-    def __init__(self, weights, num_class=21, network='efficientdet-d0', size_image=(512, 512)):
-        super(Detect,  self).__init__()
+    def __init__(self, weights, num_class=21, network='efficientdet-d0', size_image=(size_img, size_img)):
+        super(Detect, self).__init__()
         self.weights = weights
         self.size_image = size_image
         self.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else 'cpu')
         self.transform = get_augumentation(phase='test')
-        if(self.weights is not None):
+        if (self.weights is not None):
             print('Load pretrained Model')
             checkpoint = torch.load(
                 self.weights, map_location=lambda storage, loc: storage)
@@ -70,7 +71,7 @@ class Detect(object):
                                   is_training=False
                                   )
 
-        if(self.weights is not None):
+        if (self.weights is not None):
             state_dict = checkpoint['state_dict']
             self.model.load_state_dict(state_dict)
         if torch.cuda.is_available():
@@ -94,25 +95,27 @@ class Detect(object):
             colors = list()
             for j in range(scores.shape[0]):
                 bbox = transformed_anchors[[j], :][0].data.cpu().numpy()
-                x1 = int(bbox[0]*origin_img.shape[1]/self.size_image[1])
-                y1 = int(bbox[1]*origin_img.shape[0]/self.size_image[0])
-                x2 = int(bbox[2]*origin_img.shape[1]/self.size_image[1])
-                y2 = int(bbox[3]*origin_img.shape[0]/self.size_image[0])
+                x1 = int(bbox[0] * origin_img.shape[1] / self.size_image[1])
+                y1 = int(bbox[1] * origin_img.shape[0] / self.size_image[0])
+                x2 = int(bbox[2] * origin_img.shape[1] / self.size_image[1])
+                y2 = int(bbox[3] * origin_img.shape[0] / self.size_image[0])
                 bboxes.append([x1, y1, x2, y2])
                 label_name = VOC_CLASSES[int(classification[[j]])]
                 labels.append(label_name)
 
-                if(args.cam):
+                if (args.cam):
                     cv2.rectangle(origin_img, (x1, y1),
                                   (x2, y2), (179, 255, 179), 2, 1)
+
+                score = np.around(
+                    scores[[j]].cpu().numpy(), decimals=2) * 100
                 if args.score:
-                    score = np.around(
-                        scores[[j]].cpu().numpy(), decimals=2) * 100
-                    if(args.cam):
+                    if (args.cam):
                         labelSize, baseLine = cv2.getTextSize('{} {}'.format(
                             label_name, int(score)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
                         cv2.rectangle(
-                            origin_img, (x1, y1-labelSize[1]), (x1+labelSize[0], y1+baseLine), (223, 128, 255), cv2.FILLED)
+                            origin_img, (x1, y1 - labelSize[1]), (x1 + labelSize[0], y1 + baseLine), (223, 128, 255),
+                            cv2.FILLED)
                         cv2.putText(
                             origin_img, '{} {}'.format(label_name, int(score)),
                             (x1, y1), cv2.FONT_HERSHEY_SIMPLEX,
@@ -120,11 +123,12 @@ class Detect(object):
                         )
                     bbox_scores.append(int(score))
                 else:
-                    if(args.cam):
+                    if (args.cam):
                         labelSize, baseLine = cv2.getTextSize('{}'.format(
                             label_name), cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
                         cv2.rectangle(
-                            origin_img, (x1, y1-labelSize[1]), (x1+labelSize[0], y1+baseLine), (0, 102, 255), cv2.FILLED)
+                            origin_img, (x1, y1 - labelSize[1]), (x1 + labelSize[0], y1 + baseLine), (0, 102, 255),
+                            cv2.FILLED)
                         cv2.putText(
                             origin_img, '{} {}'.format(label_name, int(score)),
                             (x1, y1), cv2.FONT_HERSHEY_SIMPLEX,
@@ -163,7 +167,7 @@ class Detect(object):
             if res:
                 show_image = self.process(img=img)
                 cv2.putText(
-                    show_image, "FPS: " + str(fps), (10,  20),
+                    show_image, "FPS: " + str(fps), (10, 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (204, 51, 51), 2
                 )
 
@@ -185,4 +189,4 @@ if __name__ == '__main__':
     if args.cam:
         detect.camera()
     else:
-        detect.process(file_name=args.file_name, show=True)
+        detect.process(file_name=args.file_name, show=False)
