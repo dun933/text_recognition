@@ -14,11 +14,9 @@ def get_list_file_in_folder(dir, ext='png'):
                   if any(fn.endswith(ext) for ext in included_extensions)]
     return file_names
 
-
 def get_list_dir_in_folder(dir):
     sub_dir = [o for o in os.listdir(dir) if os.path.isdir(os.path.join(dir, o))]
     return sub_dir
-
 
 def crop_from_img_rectangle(img, left, top, right, bottom):
     extend_y = max(int((bottom - top) / 3), 4)
@@ -30,7 +28,6 @@ def crop_from_img_rectangle(img, left, top, right, bottom):
     if left >= right or top >= bottom or left < 0 or right < 0 or left >= img.shape[1] or right >= img.shape[1]:
         return None
     return img[top:bottom, left:right]
-
 
 def prepare_train_from_icdar(data_dir, output_dir, same_folder=True):
     try:
@@ -96,7 +93,7 @@ def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, tra
     list_dir_txt = []
     print('root dir:', root_dir)
 
-    alphabet = open('/home/aicr/cuongnd/aicr.core/classifier_CRNN/data/char_246').read().rstrip()
+    alphabet = open('/home/aicr/cuongnd/aicr.core/classifier_CRNN/data/char_238').read().rstrip()
     for dir in list_dir:
         # if os.path.exists(os.path.join(root_dir,dir,'origine.jpg')):
         #     os.remove(os.path.join(root_dir,dir,'origine.jpg'))
@@ -107,8 +104,8 @@ def prepare_train_test_from_multiple_dir(root_dir, list_dir, percentage=1.0, tra
         for idx, file in enumerate(list_files):
             #print(file)
             # fix unicode
-            txt_file=os.path.join(root_dir,dir, file).replace('.jpg','.txt')
-            with open(txt_file, 'r', encoding='utf-8') as f:
+            txt_file=os.path.join(root_dir,dir, file).replace('.jpg','.txt').replace('.png','.txt')
+            with open(txt_file, 'r', encoding='utf8', errors='ignore') as f:
                 txt= f.readlines()
             if len(txt)>0:
                 new_text=compound_unicode(txt[0])
@@ -264,9 +261,10 @@ def gen_blank_image(target_dir, num=150):
         with open(os.path.join(target_dir, str(i) + '.txt'), 'w') as f:
             f.write('')
 
-def remove_unsuitable_samples(dir, alphabet_path='../data/char_237'):
+def remove_unsuitable_samples(dir, alphabet_path='../data/char_238'):
     alphabet = open(alphabet_path, encoding='utf8').read().rstrip()
     list_file = get_list_file_in_folder(dir)
+    count=0
     for file in list_file:
         anno_path = os.path.join(dir,file.replace('.jpg','.txt').replace('.png','.txt'))
         anno_txt = open(anno_path, encoding='utf8').read().rstrip()
@@ -276,19 +274,22 @@ def remove_unsuitable_samples(dir, alphabet_path='../data/char_237'):
                 print(ch)
                 error = True
         if error:
-            print
+            print (count)
             print(file)
             print(anno_txt)
+            print()
+            count += 1
+            os.remove(os.path.join(dir,file))
+            os.remove(anno_path)
+
 
 if __name__ == "__main__":
-    remove_unsuitable_samples('../data')
-
-
+    #remove_unsuitable_samples('/data/dataset/ocr_dataset/random')
     #prepare_train_from_icdar(icdar_dir, output_dir)
     #fix_unicode('/data/train_data_29k_29Feb_update30Mar/val_printed')
 
-    final_list_dir=[]
-    root_dir = '/data/train_data_29k_29Feb_update30Mar'
+    final_list_dir=['en_00','en_01','vi_00','vi_01','meta','random', 'InkData_line_processed']
+    root_dir = '/data/dataset/ocr_dataset'
 
     # data_dir='cleaned_data_merge_fixed/train'
     # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
@@ -303,10 +304,10 @@ if __name__ == "__main__":
     #
     # final_list_dir.append('blank_images')
 
-    data_dir='cleaned_data_30Mar/test'
-    list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
-    for dir in list_dir:
-        final_list_dir.append(os.path.join(data_dir,dir))
+    #data_dir='cleaned_data_30Mar/test'
+    # list_dir=get_list_dir_in_folder(os.path.join(root_dir,data_dir))
+    # for dir in list_dir:
+    #     final_list_dir.append(os.path.join(data_dir,dir))
 
     # final_list_dir.append('cinnamon_data/cinamon_test_115')
     #
@@ -319,7 +320,7 @@ if __name__ == "__main__":
 
     #final_list_dir.append('printed_30Mar')
 
-    #prepare_train_test_from_multiple_dir(root_dir, final_list_dir, train_ratio=0.0)
+    prepare_train_test_from_multiple_dir(root_dir, final_list_dir, percentage=1.0, train_ratio=0.8)
     # img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
     # crop_collected_data2(img_dir)
     # gen_blank_image('/home/duycuong/PycharmProjects/dataset/blank_images')

@@ -3,6 +3,7 @@ from torch.autograd import Variable
 from models.utils import strLabelConverter
 import models.crnn as crnn
 import models.crnn128 as crnn128
+from torch.nn.functional import softmax
 import time, os, cv2
 from utils.loader import ImageFileLoader, alignCollate, NumpyListLoader
 import models.utils as utils
@@ -22,7 +23,7 @@ workers = config_crnn.workers_test
 batch_size = config_crnn.batch_size_test
 label = config_crnn.label
 debug = True
-alphabet = open(alphabet_path, encoding='utf8').read().rstrip()
+alphabet = open(alphabet_path).read().rstrip()
 nclass = len(alphabet) + 1
 nc = 3
 mean = [0.485, 0.456, 0.406]
@@ -44,6 +45,20 @@ transform_test = transforms.Compose([
 def get_list_dir_in_folder(dir):
     sub_dir = [o for o in os.listdir(dir) if os.path.isdir(os.path.join(dir, o))]
     return sub_dir
+
+def decode(converter, preds):
+    values, prob = softmax(preds, dim=-1).max(-1)
+    preds_idx = (prob > 0).nonzero().squeeze(-1)
+
+    sent_prob = values[preds_idx].mean().item()
+
+    _, preds = preds.max(-1)
+    preds_size = Variable(torch.IntTensor([preds.size(0)]))
+
+    preds = preds.view(-1)
+    sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
+
+    return sim_pred, sent_prob
 
 def predict(dir, batch_sz, max_iter=10000):
     print('Init CRNN classifier')
@@ -85,15 +100,20 @@ def predict(dir, batch_sz, max_iter=10000):
             batch_size = cpu_images.size(0)
             utils.loadData(image, cpu_images)
             preds = model(image)
-            preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
-            _, preds = preds.max(2)
-            preds = preds.transpose(1, 0).contiguous().view(-1)
-            sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
-            raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
+
+            preds = preds.squeeze(1)
+            sim_pred, sent_prob = decode(converter, preds)
+
+            # preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
+            # _, preds = preds.max(2)
+            # preds = preds.transpose(1, 0).contiguous().view(-1)
+            # sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
+            # #print(sim_pred)
+            # raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
             #print(cpu_texts[0])
             if debug:
-                print('\n', raw_pred)
-                print(sim_pred)
+                #print('\n', raw_pred)
+                print('\n',round(sent_prob,3), sim_pred, img_paths)
                 inv_tensor = inv_normalize(cpu_images[0])
                 cv_img = inv_tensor.permute(1, 2, 0).numpy()
                 cv_img_convert = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)

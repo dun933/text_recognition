@@ -40,32 +40,34 @@ max_epoches = config_crnn.max_epoches
 alphabet_path = config_crnn.alphabet_path
 workers = config_crnn.workers_train
 batch_size = config_crnn.batch_size
+train_file = config_crnn.train_file
+val_file = config_crnn.val_file
 
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-fill_color = (255, 255, 255) #(209, 200, 193)
+fill_color = (255, 255, 255)  # (209, 200, 193)
 min_scale, max_scale = 2 / 3, 2
 
 transform_train = transforms.Compose([
-        # RandomApply([cnx_aug_thin_characters()], p=0.2),
-        # RandomApply([cnx_aug_bold_characters()], p=0.4),
-        # cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color),
-        cnd_aug_resizePadding(imgW, imgH, fill=fill_color),
-        RandomApply([cnd_aug_add_line()], p=0.3),
-        RandomApply([cnx_aug_blur()], p=0.3),
-        ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
-        RandomApply([RandomAffine(shear=(-20, 20),
-                                  translate=(0.0, 0.05),
-                                  degrees=0,
-                                  # degrees=2,
-                                  # scale=(0.8, 1),
-                                  fillcolor=fill_color)], p=0.3)
-        ,ToTensor()
-        ,Normalize(mean, std)
-    ])
+    # RandomApply([cnx_aug_thin_characters()], p=0.2),
+    # RandomApply([cnx_aug_bold_characters()], p=0.4),
+    # cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color),
+    cnd_aug_resizePadding(imgW, imgH, fill=fill_color),
+    RandomApply([cnd_aug_add_line()], p=0.3),
+    RandomApply([cnx_aug_blur()], p=0.3),
+    ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+    RandomApply([RandomAffine(shear=(-20, 20),
+                              translate=(0.0, 0.05),
+                              degrees=0,
+                              # degrees=2,
+                              # scale=(0.8, 1),
+                              fillcolor=fill_color)], p=0.3)
+    , ToTensor()
+    , Normalize(mean, std)
+])
 
 transform_test = transforms.Compose([
-    #cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color, train=False),
+    # cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color, train=False),
     cnd_aug_resizePadding(imgW, imgH, fill=fill_color, train=False),
     ToTensor(),
     Normalize(mean, std)
@@ -73,8 +75,8 @@ transform_test = transforms.Compose([
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=data_dir, help='path to root folder')
-parser.add_argument('--train', default='train_merge.txt', help='path to train set')
-parser.add_argument('--val', default='val_merge.txt', help='path to val set')
+parser.add_argument('--train', default=train_file, help='path to train set')
+parser.add_argument('--val', default=val_file, help='path to val set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=workers)
 parser.add_argument('--batch_size', type=int, default=batch_size, help='input batch size')
 parser.add_argument('--imgH', type=int, default=imgH, help='the height of the input image to network')
@@ -102,8 +104,8 @@ sys.stdout = writer(sys.stdout, f)
 
 print('Please check output of training process in:', log_file)
 print(opt)
-print('Transform train:\n',transform_train)
-print('Transform val:\n',transform_test)
+print('Transform train:\n', transform_train)
+print('Transform val:\n', transform_test)
 os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpu
 
 random.seed(opt.manualSeed)
@@ -140,7 +142,7 @@ writer = SummaryWriter(opt.expr_dir)
 converter = utils.strLabelConverter(alphabet, ignore_case=False)
 criterion = CTCLoss()
 
-if opt.imgH==32:
+if opt.imgH == 32:
     crnn = crnn.CRNN32(opt.imgH, num_channel, nclass, opt.nh)
 else:
     crnn = crnn.CRNN64(opt.imgH, num_channel, nclass, opt.nh)

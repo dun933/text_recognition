@@ -15,11 +15,10 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-gpu= '0'
-#gpu= None
-img_path = 'data/SDV_invoices/I-1.png'
+gpu= '1'
+gpu= None
 img_path = '/home/aicr/cuongnd/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
-
+#img_path = '/home/aicr/cuongnd/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
 output_dir='outputs'
 #detector
 detector_model = 'model_epoch_200_minibatch_297000_8Mar'

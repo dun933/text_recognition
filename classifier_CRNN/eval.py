@@ -6,8 +6,10 @@ import random, sys
 import torch, cv2
 import torch.backends.cudnn as cudnn
 import torch.utils.data
+from torch.nn.functional import softmax
 from torch.autograd import Variable
 import numpy as np
+from warpctc_pytorch import CTCLoss
 import os, time
 import models.utils as utils
 from utils.loader import ImageFileLoader
@@ -23,7 +25,7 @@ from torchvision.transforms import ToTensor, Normalize
 eval_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
 output_dir = 'outputs/eval_' + eval_time
 ckpt_prefix = config_crnn.ckpt_prefix
-data_dir = config_crnn.test_dir
+data_dir = config_crnn.train_dir
 pretrained = config_crnn.pretrained_test
 imgW = config_crnn.imgW
 imgH = config_crnn.imgH
@@ -39,7 +41,7 @@ fill_color = (255, 255, 255)  # (209, 200, 193)
 inv_normalize = transforms.Normalize(
     mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
     std=[1 / 0.229, 1 / 0.224, 1 / 0.225])
-debug = False
+debug = True
 
 transform_test = transforms.Compose([
     # cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color, train=False),
@@ -50,7 +52,7 @@ transform_test = transforms.Compose([
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=data_dir, help='path to root folder')
-parser.add_argument('--val', default='', help='path to val set')
+parser.add_argument('--val', default='val_hw.txt', help='path to val set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=workers)
 parser.add_argument('--batch_size', type=int, default=batch_size, help='input batch size')
 parser.add_argument('--imgH', type=int, default=imgH, help='the height of the input image to network')
@@ -92,11 +94,12 @@ val_loader = torch.utils.data.DataLoader(
     shuffle=False
 )
 
-alphabet = open(opt.alphabet, encoding='utf8').read().rstrip()
+alphabet = open(opt.alphabet).read().rstrip()
 nclass = len(alphabet) + 1
 num_channel = 3
 
 converter = utils.strLabelConverter(alphabet, ignore_case=False)
+criterion = CTCLoss()
 
 if opt.imgH == 32:
     crnn = crnn.CRNN32(opt.imgH, num_channel, nclass, opt.nh)
@@ -116,18 +119,34 @@ length = torch.IntTensor(opt.batch_size)
 if opt.gpu is not None:
     crnn.cuda()
     image = image.cuda()
+    criterion = criterion.cuda()
 
 image = Variable(image)
 text = Variable(text)
 length = Variable(length)
 
-def val(net, data_loader):
+def decode(converter, preds):
+    values, prob = softmax(preds, dim=-1).max(-1)
+    preds_idx = (prob > 0).nonzero().squeeze(-1)
+
+    sent_prob = values[preds_idx].mean().item()
+
+    _, preds = preds.max(-1)
+    preds_size = Variable(torch.IntTensor([preds.size(0)]))
+
+    preds = preds.view(-1)
+    sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
+
+    return sim_pred, sent_prob
+
+def val(net, data_loader, criterion):
     print('Start val')
     for p in net.parameters():
         p.requires_grad = False
 
     net.eval()
     val_iter = iter(data_loader)
+    val_loss_avg = utils.averager()
     val_cer_avg = utils.averager()
     max_iter = len(data_loader)
     print('Total files:', num_files, ', Number of iters:', max_iter)
@@ -145,6 +164,9 @@ def val(net, data_loader):
 
             preds = net(image)
             preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_sz))
+            cost = criterion(preds, text, preds_size, length) / batch_sz
+            cost = cost.detach().item()
+            val_loss_avg.add(cost)
 
             _, preds = preds.max(2)
             preds = preds.transpose(1, 0).contiguous().view(-1)
@@ -169,13 +191,14 @@ def val(net, data_loader):
     raw_preds = converter.decode(preds.data, preds_size.data, raw=True)[:opt.n_test_disp]
     for raw_pred, pred, gt in zip(raw_preds, sim_preds, cpu_texts):
         print('\nraw: %-30s \nsim: %-30s\n gt: %-30s' % (raw_pred, pred, gt))
+    test_loss = val_loss_avg.val()
     test_cer = val_cer_avg.val()
-    print('\nTest cer %f' % (test_cer))
-    return test_cer
+    print('\nTest loss: %f - test cer %f' % (test_loss, test_cer))
+    return test_loss, test_cer
 
-#freeze_support()
+
 begin_val = time.time()
-val(crnn, val_loader)
+val(crnn, val_loader, criterion)
 end_val = time.time()
 processing_time = end_val - begin_val
 print('Processing time:', processing_time)

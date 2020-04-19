@@ -96,6 +96,14 @@ class clTable:
                 if check_out == True:
                     break
         self.listCells.sort(key=lambda x:(x[1],x[0]))
+def detect_table_from_image(img, detect_cell = True):
+    h = img.shape[0]
+    hline_list, vline_list = get_h_and_v_line_bbox_CNX(img)
+    list_p_table, hline_list, vline_list = detect_table(hline_list, vline_list, int(h / 20))
+    if detect_cell == True:
+        for i in range(0, len(list_p_table)):
+            list_p_table[i].detect_cells()
+    return list_p_table, hline_list, vline_list
 
 def detect_table(h_p_info, v_p_info, minsizetable=10, distance_p=10, distance_connect = 10 ):
     h_p_info_filter = filter_lines_error(h_p_info, False)

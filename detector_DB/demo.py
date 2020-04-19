@@ -7,18 +7,18 @@ import numpy as np
 from concern.config import Configurable, Config
 import math, time
 
-exp = 'config/aicr_ic15_resnet18.yaml'
-img_path = '../classifier_CRNN/data/data_imageVIB/VIB_page1/vib_page1-28.jpg'
+exp = '../config/aicr_ic15_resnet18.yaml'
+img_path = '../data/invoices_collected/21.jpg'
 # img_path= '../data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
 # img_path= '/home/aicr/cuongnd/text_recognition/data/Cello/imgs/190715070245517_8478000669_pod.png'
 # img_path='/home/aicr/cuongnd/text_recognition/data/CMND/5.jpg'
-
 detector_model = 'model_epoch_200_minibatch_297000_8Mar'
 ckpt_path = 'outputs/' + detector_model
 polygon = True
 visualize = True
 img_short_side = 736  # 736 1200
 detector_box_thres = 0.5
+gpu_test=None
 
 
 def main():
@@ -49,7 +49,7 @@ def main():
     experiment_args.update(cmd=args)
     experiment = Configurable.construct_class_from_config(experiment_args)
 
-    Demo(experiment, experiment_args, cmd=args).inference(img_path, args['visualize'])
+    Demo(experiment, experiment_args, gpu=gpu_test, cmd=args).inference(img_path, args['visualize'])
 
 
 class Demo:

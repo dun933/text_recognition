@@ -62,8 +62,6 @@ def visualize_boxes_json(temp_json, img, debug=False):
 
 
 import os
-
-
 def erose(root_dir, img_list):
     for img_path in img_list:
         img_path = os.path.join(root_dir, img_path)
@@ -78,8 +76,8 @@ def erose(root_dir, img_list):
 
 
 if __name__ == "__main__":
-    img = cv2.imread('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/001_template.jpg')
-    visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/001.txt', img, debug=True)
-    # root_dir = 'background_VIB'
-    # img_list = ['6.jpg', '11.jpg', '12.jpg', '38.jpg']
-    # erose(root_dir, img_list)
+    img = cv2.imread('template_VIB/0001_ori.jpg')
+    # visualize_boxes('template_VIB_page1.txt', img, debug=True)
+    root_dir = 'background_VIB'
+    img_list = ['6.jpg', '11.jpg', '12.jpg', '38.jpg']
+    erose(root_dir, img_list)

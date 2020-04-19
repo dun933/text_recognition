@@ -446,7 +446,7 @@ def augment_image_addline_simple(img, size_draw=1, sizelinedot=1):
     #print('size draw',size_draw)
 
     if type <= 0:
-        draw_color = random.choice([black_color, red_color, white_color, rand_color])
+        draw_color = random.choice([black_color, red_color, red_color, white_color, rand_color]) #double red color
         #print(draw_color)
         cv2.line(img, (0, h_average - 1), (w_img, h_average - 1), draw_color, size_draw)
         cv2.line(img, (0, h_average), (w_img, h_average), draw_color, size_draw)

@@ -1,11 +1,21 @@
 import time, os
 import cv2, math
 import numpy as np
-from form.form_processing import visualize_boxes
+# from form.form_processing import visualize_boxes
 
 RADIAN_PER_DEGREE = 0.0174532
 debug = False
 
+
+def resize_normalize(img, normalize_width=1654):
+    w = img.shape[1]
+    h = img.shape[0]
+    resize_ratio = normalize_width / w
+    normalize_height = round(h * resize_ratio)
+    resize_img = cv2.resize(img, (normalize_width, normalize_height), interpolation=cv2.INTER_CUBIC)
+    # cv2.imshow('resize img', resize_img)
+    # cv2.waitKey(0)
+    return resize_ratio, resize_img
 
 def draw_bboxes(img, bboxes, window_name='draw bboxes'):
     # e.g: bboxes= [(0,0),(0,5),(5,5),(5,0)]
@@ -21,17 +31,17 @@ def draw_bboxes(img, bboxes, window_name='draw bboxes'):
         cv2.line(img_RGB, bbox[3], bbox[0], color=color_red, thickness=2)
 
     img_RGB = cv2.resize(img_RGB, (int(img_RGB.shape[1] / 2), int(img_RGB.shape[0] / 2)))
-    cv2.imshow(window_name, img_RGB)
-    cv2.waitKey(0)
+    #cv2.imshow(window_name, img_RGB)
+    #cv2.waitKey(0)
 
 
 class Template_info:
     def __init__(self, name, template_path, field_bboxes, field_rois_extend=1.0, field_search_areas=None,
-                 confidence=0.7, scales=(0.9, 1.1, 0.1), rotations=(-2, 2, 2), normalize_width=1654):
+                 confidence=0.7, scales=(0.9, 1.1, 0.1), rotations=(-2, 2, 2), normalize_width=1654): #1654
         self.name = name
         self.template_img = cv2.imread(template_path, 0)
 
-        self.resize_ratio, self.template_img = self.resize_normalize(self.template_img, normalize_width)
+        self.resize_ratio, self.template_img = resize_normalize(self.template_img, normalize_width)
         self.template_width = self.template_img.shape[1]
         self.template_height = self.template_img.shape[0]
         self.confidence = confidence
@@ -68,15 +78,6 @@ class Template_info:
             self.createSamples(field, scales, rotations)
             self.list_field_samples.append(field)
 
-    def resize_normalize(self, img, normalize_width=1654):
-        w = img.shape[1]
-        h = img.shape[0]
-        resize_ratio = normalize_width / w
-        normalize_height = round(h * resize_ratio)
-        resize_img = cv2.resize(img, (normalize_width, normalize_height), interpolation=cv2.INTER_CUBIC)
-        # cv2.imshow('resize img', resize_img)
-        # cv2.waitKey(0)
-        return resize_ratio, resize_img
 
     def resize_bbox(self, bbox, resize_ratio):
         for i in range(len(bbox)):
@@ -277,13 +278,14 @@ class MatchingTemplate:
             sample_data = sample['data']
             res = cv2.matchTemplate(process_img, sample_data, 3)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            print('Score:', round(max_val, 4), 'Scale:', sample['scale'], 'Angle:', sample['rotation'], max_loc[0] + sample_data.shape[1] / 2, max_loc[1] + sample_data.shape[0] / 2)
             if max_val > max_conf and max_val > thres:
                 max_conf = max_val
                 final_locx, final_locy = max_loc[0] + sample_data.shape[1] / 2, max_loc[1] + sample_data.shape[0] / 2
                 final_sample = sample
         if fast:
             final_locx, final_locy = final_locx + field['search_area'][0], final_locy + field['search_area'][1]
-        print('Score:', round(max_conf, 4), 'Scale:', final_sample['scale'], 'Angle:', final_sample['rotation'],
+        print('\nScore:', round(max_conf, 4), 'Scale:', final_sample['scale'], 'Angle:', final_sample['rotation'],
               'Location:', final_locx, final_locy)
 
         # get rec result
@@ -311,7 +313,7 @@ class MatchingTemplate:
         ry4 = round((y0 + (x1 - x0) * sa + (y2 - y0) * ca))
 
         self.matching_results = [(rx1, ry1), (rx2, ry2), (rx3, ry3), (rx4, ry4)]
-        draw_bboxes(input_img, [self.matching_results], field['name'])
+        # draw_bboxes(input_img, [self.matching_results], field['name'])
 
         return max_conf, final_locx, final_locy
 
@@ -327,7 +329,7 @@ class MatchingTemplate:
             gray_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
         list_pts = []
 
-        cv2.imwrite('test.jpg', gray_img)
+        #cv2.imwrite('test.jpg', gray_img)
 
         for idx, field in enumerate(template_data.list_field_samples):
             print(field['name'])
@@ -336,6 +338,7 @@ class MatchingTemplate:
 
         src_pts = np.asarray(list_pts, dtype=np.float32)
         dst_pts = np.asarray(template_data.field_locs, dtype=np.float32)
+        trans_img = src_img
         if len(src_pts) == 3:  # affine transformation
             affine_trans = cv2.getAffineTransform(src_pts, dst_pts)
             trans_img = cv2.warpAffine(src_img, affine_trans,
@@ -369,13 +372,13 @@ def test_calib():
     match = MatchingTemplate()
     match.add_template(template_name='006',
                        template_path='../../data/SDV_invoices_mod/006_template.jpg',
-                       field_bboxes=[[78, 136, 292, 92], [1106, 112, 156, 140], [1182, 1754, 242, 120]],
+                       field_bboxes=[[78, 136, 292, 92], [1106, 112, 156, 140], [1182, 1754, 242, 120]], #006
+                       #field_bboxes=[[120, 133, 352, 124], [1098, 118, 246, 138], [556, 1764, 420, 92]],
                        field_rois_extend=1.0,
                        field_search_areas=None,
-                       confidence=0.3,
-                       scales=(0.9, 1.1, 0.1),
-                       rotations=(-2, 2, 2))
-    match.draw_template('006')
+                       confidence=0.7,
+                       scales=(0.95, 1.05, 0.05),
+                       rotations=(-1, -1, 1))
     end_init = time.time()
     print('Time init:', end_init - begin_init, 'seconds')
 
@@ -388,15 +391,16 @@ def test_calib():
 
     debug = True
     if debug:
-        src_img_with_box = visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/006.txt', src_img,
-                                           debug=False, offset_x=-20, offset_y=-20)
-        src_img_with_box = cv2.resize(src_img_with_box, (int(src_img.shape[1] / 2), int(src_img.shape[0] / 2)))
+        # src_img_with_box = visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/006.txt', src_img,
+        #                                    debug=False, offset_x=-20, offset_y=-20)
+        src_img_with_box = cv2.resize(src_img, (int(src_img.shape[1] / 2), int(src_img.shape[0] / 2)))
         cv2.imshow('src with boxes', src_img_with_box)
-        trans_img_with_box = visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/006.txt',
-                                             calib_img, debug=False, offset_x=-20, offset_y=-20)
-        trans_img_with_box = cv2.resize(trans_img_with_box, (int(calib_img.shape[1] / 2), int(calib_img.shape[0] / 2)))
+        # trans_img_with_box = visualize_boxes('/home/aicr/cuongnd/text_recognition/data/SDV_invoices_mod/006.txt',
+        #                                      calib_img, debug=False, offset_x=-20, offset_y=-20)
+        trans_img_with_box = cv2.resize(calib_img, (int(calib_img.shape[1] / 2), int(calib_img.shape[0] / 2)))
         cv2.imshow('transform_with_boxes', trans_img_with_box)
-        cv2.imwrite(src_img_path.replace('.jpg', '_transform.jpg'), trans_img_with_box)
+        base_name = os.path.basename(src_img_path)
+        cv2.imwrite(src_img_path.replace(base_name, 'transform/'+base_name.replace('.jpg','_trans.jpg')), trans_img_with_box)
         cv2.waitKey(0)
 
 

@@ -140,7 +140,8 @@ def correct_country(raw, sym_spell, edit_distance=5, verbosity=0):
 
 def load_date_correction(csv_data=None, edit_distance=2, prefix_length=4):
     data = csv_data
-    data = [str(year) for year in data]
+    data = [str(i) for i in data]
+    data.append('  -  ')
     c = collections.Counter()
     for i in data:
         c.update({i})
@@ -154,7 +155,6 @@ def load_date_correction(csv_data=None, edit_distance=2, prefix_length=4):
 
 def correction(raw, sym_spell, edit_distance=2, verbosity=0):
     check_raw = raw.replace(' ', '')
-    # print(raw)
     if check_raw != '':
         countr_fix_lookup = sym_spell.lookup(raw.lower(), max_edit_distance=edit_distance, verbosity=verbosity)
         if len(countr_fix_lookup) > 1:
@@ -180,17 +180,23 @@ def correction(raw, sym_spell, edit_distance=2, verbosity=0):
 
 
 def correct_date(day, month, year):
-    year_corpus = datetime.datetime.today().year
-    year_corpus = list(range(year_corpus, year_corpus - 100, -1))
-    year_spell = load_date_correction(csv_data=year_corpus)
-    fixed_year = correction(year, year_spell)
+    fixed_year = year
+    if year.strip() != '':
+        year_corpus = datetime.datetime.today().year
+        year_corpus = list(range(year_corpus, year_corpus - 100, -1))
+        year_spell = load_date_correction(csv_data=year_corpus)
+        fixed_year = correction(year, year_spell)
 
-    datelist = pd.date_range(start='2020-01-01', end='2020-12-31').tolist()
-    datelist = list(map(pd.Timestamp.to_pydatetime, datelist))
-    datelist = [d.strftime("%d-%m") for d in datelist]
-    date_spell = load_date_correction(csv_data=datelist, edit_distance=5, prefix_length=6)
-    fixed_date = correction(day + '-' + month, date_spell, edit_distance=5)
-    fixed_day, fixed_month = fixed_date.split('-')
+    fixed_day = day
+    fixed_month = month
+    if day.strip() != '' and month.strip() != '':
+        datelist = pd.date_range(start='2020-01-01', end='2020-12-31').tolist()
+        datelist = list(map(pd.Timestamp.to_pydatetime, datelist))
+        datelist = [d.strftime("%d-%m") for d in datelist]
+        date_spell = load_date_correction(csv_data=datelist, edit_distance=5, prefix_length=6)
+        fixed_date = correction(day + '-' + month, date_spell, edit_distance=5)
+        fixed_day, fixed_month = fixed_date.split('-')
+
     return fixed_day, fixed_month, fixed_year
 
 
@@ -227,14 +233,14 @@ def correct_cpn(name_string, sym_spell, debug=False, GT_file=None):
         l = l.lower()
         l = l.split('\n')
         distant = 0
+        relation_fixed = suggestions[0]._term
         for ctr in l:
             tem_distant = fuzz.ratio(suggestions[0]._term, ctr)
             if tem_distant > distant:
                 distant = tem_distant
                 relation_fixed = ctr
-        # print('relation_fixed', relation_fixed)
         relation_fixed = correct_capital(raw=name_string, fixed=relation_fixed)
-        return relation_fixed
+        return relation_fixed, fuzz.ratio(name_string, relation_fixed)
     output = []
     for name in list_name:
         if name is not None:
@@ -242,7 +248,49 @@ def correct_cpn(name_string, sym_spell, debug=False, GT_file=None):
         else:
             name = name_string
         output.append(name)
-    return output[0]
+    return output[0], fuzz.ratio(name_string, output[0])
+
+
+smallCurrencies = [
+    "cents",
+    "xu"
+]
+bigCurrencies = [
+    "đô la mỹ",
+    "việt nam đồng",
+    "vnd",
+    "vnđ",
+    "usd",
+    "krw",
+    "đồng",
+    "mỹ",
+    "đô",
+    "la"
+]
+
+
+def correctMoneyByWords(money_string, sym_spell, debug=False, GT_file=None):
+    existSmallCurrency = False
+    money_string_fixed = correct_cpn(money_string, sym_spell, debug=debug, GT_file=GT_file)
+    # print(name_string)
+    money_string_fixed, conf = money_string_fixed
+    for sc in smallCurrencies:
+        group = re.search(sc, money_string_fixed, re.IGNORECASE)
+        if group is not None:
+            money_string_fixed = money_string_fixed.split(group.group())[0].strip() + ' ' + group.group()
+            existSmallCurrency = True
+    if existSmallCurrency == False:
+        for p in bigCurrencies:
+            group = re.search(p, money_string_fixed, re.IGNORECASE)
+            if group is not None:
+                money_string_fixed = money_string_fixed.split(group.group())[0].strip() + ' ' + group.group()
+    temp_dt = fuzz.ratio(decompound_unicode(money_string_fixed), decompound_unicode(money_string[0]))
+    # print('temp_dt:',temp_dt)
+    # print('money_string[0]:',money_string[0], 'money_string_fixed', money_string_fixed)
+    if temp_dt < 30:
+        return (money_string, conf)
+    else:
+        return (money_string_fixed, conf)
 
 
 def load_relationship_correction(csv_data, edit_distance=5, prefix_length=7):
@@ -304,28 +352,28 @@ def findUncommonChars(str1, str2, MAX_CHAR=26):
 if __name__ == "__main__":
     cpn_list = 'data/companies-list.txt'
     cpn_spell = load_cpn_corection(cpn_list, True)
-    print(correct_cpn('CÔNG TY TNHH SXDVCÔNG NGHỆ BÁN DÃN TOÀN CẨU VIỆT NAM', cpn_spell, GT_file=cpn_list, debug=True))
-    print('fuzzy distance', fuzz.ratio('CÔNG TY TNHH SXDVCÔNG NGHỆ BÁN DÃN TOÀN CẨU VIỆT NAM',
-                                       'CÔNG TY TNHH SX DV CÔNG NGHỆ BÁN DẪN TOÀN CẦU VIỆT NAM'))
-    print(correct_date('34', '13', '20.20'))
-
-    cntry_list = 'data/country-list.txt'
-    sym_spell = load_country_correction(csv_data=cntry_list)
-    print(correct_country('vnv', sym_spell))
-
-    csv_data = 'data/relationship_list.txt'
-    sym_spell = load_relationship_correction(csv_data=csv_data)
-    print(correct_relationship('Bn Gái', sym_spell, debug=True))
-    input_term = "Nguyễn, Minh Thanh"
-    sym_spell = load_name_corection("freq_name_dic.txt", "freq_name_bigram.txt")
-    print(correct_name(sym_spell, input_term))
-
-    money_word_list = 'data/num_by_word.txt'
-    money_word_spell = load_cpn_corection(money_word_list, debug=True)
-    print(correct_cpn('Bảy mươi tám ngìn chín trăm chín mươi tám Đô la Mi và năm mươi m0E CCNES', money_word_spell))
-    print(correct_capital(raw='Anw', fixed='anw'))
-
-    str1 = "74-03"
-    str2 = "24-03"
+    print(correct_cpn('CÔNG TY TNHH SXDVCÔNG  VIỆT NAM', cpn_spell, GT_file=cpn_list, debug=True))
+    # print('fuzzy distance', fuzz.ratio('CÔNG TY TNHH SXDVCÔNG NGHỆ BÁN DÃN TOÀN CẨU VIỆT NAM',
+    #                                    'CÔNG TY TNHH SX DV CÔNG NGHỆ BÁN DẪN TOÀN CẦU VIỆT NAM'))
+    print(correct_date('1', '', '12'))
+    #
+    # cntry_list = 'data/country-list.txt'
+    # sym_spell = load_country_correction(csv_data=cntry_list)
+    # print(correct_country('vnv', sym_spell))
+    #
+    # csv_data = 'data/relationship_list.txt'
+    # sym_spell = load_relationship_correction(csv_data=csv_data)
+    # print(correct_relationship('Bn Gái', sym_spell, debug=True))
+    # input_term = "Nguyễn, Minh Thanh"
+    # sym_spell = load_name_corection("freq_name_dic.txt", "freq_name_bigram.txt")
+    # print(correct_name(sym_spell, input_term))
+    #
+    # money_word_list = 'data/num_by_word.txt'
+    # money_word_spell = load_cpn_corection(money_word_list, debug=True)
+    # print(correct_cpn('Bảy mươi tám ngìn chín trăm chín mươi tám Đô la Mi và năm mươi m0E CCNES', money_word_spell))
+    # print(correct_capital(raw='Anw', fixed='anw'))
+    #
+    # str1 = "74-03"
+    # str2 = "24-03"
     # findUncommonChars(str1, str2)
     # print(findUncommonChars(str1, str2))
