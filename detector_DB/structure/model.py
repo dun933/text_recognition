@@ -41,9 +41,9 @@ class SegDetectorModel(nn.Module):
         self.model = BasicModel()
         self.criterion = SegDetectorLossBuilder('L1BalanceCELoss').build()
         # for loading models
-        if device.type !='cpu':
-            self.model = parallelize(self.model, distributed, local_rank)
-            self.criterion = parallelize(self.criterion, distributed, local_rank)
+        # if device.type !='cpu':
+        #     self.model = parallelize(self.model, distributed, local_rank)
+        #     self.criterion = parallelize(self.criterion, distributed, local_rank)
         print('No paralell!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         self.device = device
         self.to(self.device)

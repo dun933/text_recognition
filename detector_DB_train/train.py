@@ -18,8 +18,6 @@ from training.model_saver import ModelSaver
 from training.optimizer_scheduler import OptimizerScheduler
 from concern.config import Configurable, Config
 from datetime import datetime
-# import cv2
-# cv2.setNumThreads(0)
 import os
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'

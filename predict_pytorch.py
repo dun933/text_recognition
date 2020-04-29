@@ -24,14 +24,14 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 
 gpu = '0'
 #gpu= None
-img_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/datasets/invoices_28April/test_images/II-9_d.png'
+img_path = 'detector_DB_train/datasets/invoices_28April/test_images/II-9_d.png'
 output_dir = 'outputs'
 # detector
 detector_model = 'model_epoch_200_minibatch_297000_8Mar'
-ckpt_path = 'detector_DB/outputs/' + detector_model
+ckpt_path = 'detector_DB_train/outputs/' + detector_model
 
-detector_model = 'model_epoch_714_minibatch_15000'
-ckpt_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/workspace/outputs/train_2020-04-28_22-59/model/' + detector_model
+detector_model = 'model_epoch_571_minibatch_12000'
+ckpt_path = 'detector_DB_train/outputs/train_2020-04-28_22-54/model' + detector_model
 
 detector_box_thres = 0.315
 polygon = False
@@ -42,7 +42,7 @@ img_short_side = 736  # 736
 classifier_ckpt_path = 'AICR_pretrained_59_Test_43.16_cer_0.227.pth'
 classifier_width = 1000
 
-classifier_height = 32
+classifier_height = 64
 alphabet_path = 'config/char_246'
 if classifier_height == 64:
     classifier_ckpt_path = 'classifier_CRNN/ckpt/AICR_SDV_30Mar_300_loss_1.25_cer_0.0076.pth'

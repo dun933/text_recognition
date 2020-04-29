@@ -9,9 +9,9 @@ from structure.model import SegDetectorModel
 from structure.representers.seg_detector_representer import SegDetectorRepresenter
 from structure.visualizers.seg_detector_visualizer import SegDetectorVisualizer
 
-img_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/datasets/invoices_28April/test_images/147_1.jpg'
-detector_model = 'model_epoch_714_minibatch_15000'
-ckpt_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/workspace/outputs/train_2020-04-28_22-59/model/' + detector_model
+img_path = '../detector_DB_train/datasets/invoices_28April/test_images/147_1.jpg'
+detector_model = 'model_epoch_571_minibatch_12000'
+ckpt_path = '../detector_DB_train/outputs/train_2020-04-28_22-54/' + detector_model
 # detector_model = 'pre-trained-model-synthtext-resnet18'
 # ckpt_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/pretrained/' + detector_model
 

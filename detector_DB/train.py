@@ -20,12 +20,13 @@ from datetime import datetime
 #import cv2
 #cv2.setNumThreads(0)
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-config_file='config/aicr_ic15_resnet18.yaml'
+config_file='config/aicr_td500_resnet18.yaml'
 training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
 training_dir='outputs/train_'+training_time
-resume_ckpt='models/pre-trained-model-synthtext-resnet18'
+#resume_ckpt='models/pre-trained-model-synthtext-resnet18'
+resume_ckpt=None
 #resume_ckpt='outputs/workspace/DB_Liao/outputs/train_2020-02-11_18-54/model/model_epoch_216_minibatch_135000'
 
 def main():

@@ -41,9 +41,8 @@ define:
         - class: AugmentDetectionData
           augmenter_args:
               - ['Resize', {'width': 736, 'height': 1280}]
-              # - ['Resize', {'width': 2048, 'height': 1152}]
           only_resize: True
-          keep_ratio: False
+          keep_ratio: True
         - class: MakeICDARData
         - class: MakeSegDetectionData
         - class: NormalizeImage
