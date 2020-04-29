@@ -3,6 +3,9 @@ This is a PyToch implementation of "Real-time Scene Text Detection with Differen
 
 Part of the code is inherited from [MegReader](https://github.com/Megvii-CSG/MegReader).
 
+## Update 27 April 2020
+To run code in Window, install *shapely* by conda to pass error "no xxx.dll"
+
 ## ToDo List
 
 - [x] Release code
@@ -171,5 +174,5 @@ Please cite the related works in your publications if it helps your research:
     }
 
 
-    
+
 

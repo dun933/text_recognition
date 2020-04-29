@@ -109,16 +109,6 @@ def augment_add_hsv(img, light=30, sat=26):
     return imgbgr
 
 
-def filter_color_image(img, lower_hsv, uper_hsv, binaryimage=True):
-    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(img_hsv, lower_hsv, uper_hsv)
-    if binaryimage == True:
-        return mask
-    else:
-        res = cv2.bitwise_and(img, img, mask=mask)
-        return res
-
-
 def augment_random_erase(img, numb_char_erase):
     img2 = img.copy()
     h_img = img.shape[0]
@@ -802,8 +792,17 @@ def test_augment():
         cv2.waitKey(0)
 
 
+
 if __name__ == "__main__":
-    test_augment()
+    # test_augment()
+    img = cv2.imread('C:/Users/chungnx/PycharmProjects/aicr.core/data/SDV_invoices_mod/006_1.jpg')
+    cv2.imshow("s",img)
+    img1 = filter_color_image(img,lower_red1,upper_red1)
+    img2 = filter_color_image(img,lower_red2,upper_red2)
+    img3 =  filter_color_image(img,lower_black,upper_black)
+    img1 += img2
+    img1 = cv2.bitwise_not(img1,mask=img3)
+    cv2.imwrite('2.jpg',img1)
     # path = 'C:/Users/chungnx/PycharmProjects/aicr.core/data/cmnd_1/22.jpg'
     # img = cv2.imread(path)
     # cv2.imshow("eq1", img)

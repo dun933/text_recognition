@@ -260,6 +260,7 @@ def deformable_resnet18(pretrained=True, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
+    print('Use deform resnet 18')
     model = ResNet(BasicBlock, [2, 2, 2, 2],
                     dcn=dict(modulated=True,
                             deformable_groups=1,

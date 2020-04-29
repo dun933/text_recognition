@@ -52,7 +52,7 @@ transform_test = transforms.Compose([
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default=data_dir, help='path to root folder')
-parser.add_argument('--val', default='val_hw.txt', help='path to val set')
+parser.add_argument('--val', default='val_hw_old.txt', help='path to val set')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=workers)
 parser.add_argument('--batch_size', type=int, default=batch_size, help='input batch size')
 parser.add_argument('--imgH', type=int, default=imgH, help='the height of the input image to network')

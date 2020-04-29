@@ -56,9 +56,10 @@ def decode(converter, preds):
     preds_size = Variable(torch.IntTensor([preds.size(0)]))
 
     preds = preds.view(-1)
+    raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
     sim_pred = converter.decode(preds.data, preds_size.data, raw=False)
 
-    return sim_pred, sent_prob
+    return raw_pred, sim_pred, sent_prob
 
 def predict(dir, batch_sz, max_iter=10000):
     print('Init CRNN classifier')
@@ -102,7 +103,7 @@ def predict(dir, batch_sz, max_iter=10000):
             preds = model(image)
 
             preds = preds.squeeze(1)
-            sim_pred, sent_prob = decode(converter, preds)
+            raw_pred, sim_pred, sent_prob = decode(converter, preds)
 
             # preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
             # _, preds = preds.max(2)
@@ -112,7 +113,7 @@ def predict(dir, batch_sz, max_iter=10000):
             # raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
             #print(cpu_texts[0])
             if debug:
-                #print('\n', raw_pred)
+                print('\n', raw_pred)
                 print('\n',round(sent_prob,3), sim_pred, img_paths)
                 inv_tensor = inv_normalize(cpu_images[0])
                 cv_img = inv_tensor.permute(1, 2, 0).numpy()

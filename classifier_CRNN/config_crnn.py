@@ -19,7 +19,7 @@ val_file = 'val_merge.txt'
 ckpt_prefix = 'AICR_finetune_char_238_64'
 
 # test
-test_dir = '/home/aicr/cuongnd/data'
+test_dir = '/home/aicr/cuongnd/data/test/GWP/crop'
 pretrained_test = 'outputs/train_2020-04-15_11-20/AICR_finetune_char_238_64_239_loss_0.69_cer_0.0053.pth'
 #pretrained_test = 'ckpt/AICR_SDV_30Mar_300_loss_1.25_cer_0.0076.pth'
 # for testing SDV printing character cases

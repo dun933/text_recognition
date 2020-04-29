@@ -5,40 +5,53 @@ from detector_DB.concern.config import Configurable, Config
 from BoundingBox import bbox
 import argparse
 
-#classifier
+# classifier
 from classifier_CRNN.models.utils import strLabelConverter
 from torch.autograd import Variable
 import classifier_CRNN.models.crnn as crnn
 import classifier_CRNN.models.utils as utils
+from torchvision import transforms
+from pre_processing.augment_functions import cnd_aug_randomResizePadding, cnd_aug_resizePadding
+from torchvision.transforms import RandomApply, ColorJitter, RandomAffine, ToTensor, Normalize
 from classifier_CRNN.utils.loader import NumpyListLoader, alignCollate
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
+from structure.model import SegDetectorModel
+from structure.representers.seg_detector_representer import SegDetectorRepresenter
+from structure.visualizers.seg_detector_visualizer import SegDetectorVisualizer
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-gpu= '1'
-gpu= None
-img_path = '/home/aicr/cuongnd/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
-#img_path = '/home/aicr/cuongnd/text_recognition/data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
-output_dir='outputs'
-#detector
+gpu = '0'
+#gpu= None
+img_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/datasets/invoices_28April/test_images/II-9_d.png'
+output_dir = 'outputs'
+# detector
 detector_model = 'model_epoch_200_minibatch_297000_8Mar'
-detector_box_thres = 0.315
-config_file = 'config/aicr_ic15_resnet18.yaml'
 ckpt_path = 'detector_DB/outputs/' + detector_model
+
+detector_model = 'model_epoch_714_minibatch_15000'
+ckpt_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/workspace/outputs/train_2020-04-28_22-59/model/' + detector_model
+
+detector_box_thres = 0.315
 polygon = False
-visualize = True
+visualize = False
 img_short_side = 736  # 736
 
 # classifier
-classifier_ckpt_path = 'models/AICR_CRNN_printing_11.pth'
-classifier_width = 256
-classifier_height = 64
-alphabet_path='config/char_229'
+classifier_ckpt_path = 'AICR_pretrained_59_Test_43.16_cer_0.227.pth'
+classifier_width = 1000
+
+classifier_height = 32
+alphabet_path = 'config/char_246'
 if classifier_height == 64:
     classifier_ckpt_path = 'classifier_CRNN/ckpt/AICR_SDV_30Mar_300_loss_1.25_cer_0.0076.pth'
-    alphabet_path='config/char_246'
+    alphabet_path = 'config/char_246'
 classifier_batch_sz = 16
-draw_text=True
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
+fill_color = (255, 255, 255)
+draw_text = True
 debug = False
 if debug:
     classifier_batch_sz = 1
@@ -46,9 +59,8 @@ if debug:
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
-    parser.add_argument('--exp', type=str, default=config_file)
     parser.add_argument('--resume', type=str, help='Resume from checkpoint', default=ckpt_path)
-    parser.add_argument('--result_dir', type=str, default = output_dir, help='path to save results')
+    parser.add_argument('--result_dir', type=str, default=output_dir, help='path to save results')
     parser.add_argument('--data', type=str,
                         help='The name of dataloader which will be evaluated on.')
     parser.add_argument('--image_short_side', type=int, default=img_short_side,
@@ -78,18 +90,18 @@ def main():
     end_detector = time.time()
     print('Detector time:', end_detector - end_init, 'seconds')
 
-    boxes_data, boxes_info = get_boxes_data(test_img, boxes_list)
+    boxes_data, boxes_info, max_wh_ratio = get_boxes_data(test_img, boxes_list)
     end_get_boxes_data = time.time()
     print('Get boxes time:', end_get_boxes_data - end_detector, 'seconds')
 
-    values = classifier.inference(boxes_data)
+    values = classifier.inference(boxes_data, max_wh_ratio)
     end_classifier = time.time()
     print('Classifier time:', end_classifier - end_get_boxes_data, 'seconds')
     print('\nTotal predict time:', end_classifier - end_init, 'seconds')
 
     for idx, box in enumerate(boxes_info):
         box.asign_value(values[idx])
-    visualize_results(test_img,boxes_info, draw_text)
+    visualize_results(test_img, boxes_info, draw_text)
     end_visualize = time.time()
     print('Visualize time:', end_visualize - end_classifier, 'seconds')
     print('Done')
@@ -103,15 +115,17 @@ def visualize_results(img, boxes_info, text=False, inch=40):
 
     for box in boxes_info:
         if text:
-            plt.text(box.xmin - 2, box.ymin - 4, box.value, fontsize=max(int(box.height/4), 12), fontdict={"color": 'r'})
+            plt.text(box.xmin - 2, box.ymin - 4, box.value, fontsize=max(int(box.height / 3), 12),
+                     fontdict={"color": 'r'})
 
         ax.add_patch(patches.Rectangle((box.xmin, box.ymin), box.width, box.height,
                                        linewidth=2, edgecolor='green', facecolor='none'))
 
-    #plt.show()
+    # plt.show()
     save_img_path = os.path.join(output_dir, img_path.split('/')[-1].split('.')[0] + '_visualized.jpg')
     print('Save image to', save_img_path)
     fig.savefig(save_img_path, bbox_inches='tight')
+
 
 def init_models(args, gpu='0'):
     if gpu != None:
@@ -119,26 +133,23 @@ def init_models(args, gpu='0'):
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu
     else:
         print('Use CPU')
-    conf = Config()
-    experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
-    experiment_args.update(cmd=args)
-    experiment = Configurable.construct_class_from_config(experiment_args)
-    detector = Detector_DB(experiment, experiment_args, gpu=gpu, cmd=args)
+    detector = Detector_DB(gpu=gpu, cmd=args)
     classifier = Classifier_CRNN(ckpt_path=classifier_ckpt_path, batch_sz=classifier_batch_sz,
                                  imgW=classifier_width, imgH=classifier_height, gpu=gpu, alphabet_path=alphabet_path)
     return detector, classifier
 
+
 class Detector_DB:
-    def __init__(self, experiment, args, gpu='0', cmd=dict()):
+    def __init__(self, gpu='0', cmd=dict()):
         self.RGB_MEAN = np.array([122.67891434, 116.66876762, 104.00698793])
-        self.experiment = experiment
         self.gpu = gpu
-        experiment.load('evaluation', **args)
         self.args = cmd
-        self.structure = experiment.structure
         self.init_torch_tensor()
         self.init_model(self.args['resume'])
         self.model.eval()
+
+        self.segRepresent = SegDetectorRepresenter()
+        self.segVisualizer = SegDetectorVisualizer()
 
     def init_torch_tensor(self):
         if torch.cuda.is_available() and self.gpu != None:
@@ -149,13 +160,14 @@ class Detector_DB:
             torch.set_default_tensor_type('torch.FloatTensor')
 
     def init_model(self, path):
-        self.model = self.structure.builder.build(self.device)
+        self.model = SegDetectorModel(self.device, distributed=False, local_rank=0)
         if not os.path.exists(path):
-            print("Detector. Checkpoint not found: " + path)
+            print("Checkpoint not found: " + path)
             return
+        print("Resuming from " + path)
         states = torch.load(path, map_location=self.device)
         self.model.load_state_dict(states, strict=False)
-        print("Detector. Resumed from " + path)
+        print("Resumed from " + path)
 
     def resize_image(self, img):
         height, width, _ = img.shape
@@ -180,6 +192,7 @@ class Detector_DB:
     def format_output(self, batch, output):
         batch_boxes, batch_scores = output
         for index in range(batch['image'].size(0)):
+            original_shape = batch['shape'][index]
             filename = batch['filename'][index]
             result_file_name = 'res_' + filename.split('/')[-1].split('.')[0] + '.txt'
             result_file_path = os.path.join(self.args['result_dir'], result_file_name)
@@ -210,23 +223,20 @@ class Detector_DB:
         with torch.no_grad():
             batch['image'] = img
             pred = self.model.forward(batch, training=False)
-            output = self.structure.representer.represent(batch, pred, is_output_polygon=self.args['polygon'])
+            output = self.segRepresent.represent(batch, _pred=pred, is_output_polygon=self.args['polygon'])
             if not os.path.isdir(self.args['result_dir']):
                 os.mkdir(self.args['result_dir'])
             self.format_output(batch, output)
             boxes, _ = output
             boxes = boxes[0]
-            if visualize and self.structure.visualizer:
-                vis_image = self.structure.visualizer.demo_visualize(image_path, output)
-                #s_image = cv2.resize(vis_image,fx=0.5, fy=0.5)
-                #ch = cv2.imshow('result',vis_image)
 
-                #cv2.waitKey(0)
-
+            if visualize:
+                vis_image = self.segVisualizer.demo_visualize(image_path, output)
                 cv2.imwrite(os.path.join(self.args['result_dir'],
                                          image_path.split('/')[-1].split('.')[0] + '_ ' + detector_model + '_ ' + str
                                          (detector_box_thres) + '.jpg'), vis_image)
             return boxes
+
 
 class Classifier_CRNN:
     def __init__(self, ckpt_path='', gpu='0', batch_sz=16, workers=4, num_channel=3, imgW=256, imgH=64,
@@ -234,12 +244,12 @@ class Classifier_CRNN:
         self.imgW = imgW
         self.imgH = imgH
         self.batch_sz = batch_sz
-        alphabet = open(alphabet_path).read().rstrip()
+        alphabet = open(alphabet_path, encoding='utf-8').read().rstrip()
         nclass = len(alphabet) + 1
         self.image = torch.FloatTensor(batch_sz, 3, imgH, imgH)
         self.text = torch.IntTensor(batch_sz * 5)
         self.length = torch.IntTensor(batch_sz)
-        if classifier_height ==32:
+        if classifier_height == 32:
             self.model = crnn.CRNN32(imgH, num_channel, nclass, 256)
         else:
             self.model = crnn.CRNN64(imgH, num_channel, nclass, 256)
@@ -255,17 +265,25 @@ class Classifier_CRNN:
         self.workers = workers
         self.model.eval()
 
-    def inference(self, img_list, visualize=False):
-        val_dataset = NumpyListLoader(img_list)
+    def inference(self, img_list, max_wh_ratio):
+        new_W = int(self.imgH * max_wh_ratio)
+        print('New W', new_W)
+        transform_test = transforms.Compose([
+            # cnd_aug_randomResizePadding(imgH, imgW, min_scale, max_scale, fill=fill_color, train=False),
+            cnd_aug_resizePadding(new_W, self.imgH, fill=fill_color, train=False),
+            ToTensor(),
+            Normalize(mean, std)
+        ])
+
+        val_dataset = NumpyListLoader(img_list, transform=transform_test)
         num_files = len(val_dataset)
-        print('Classifier. Begin classify',num_files,'boxes')
-        values=[]
+        print('Classifier. Begin classify', num_files, 'boxes')
+        values = []
         val_loader = torch.utils.data.DataLoader(
             val_dataset,
             batch_size=self.batch_sz,
             num_workers=self.workers,
-            shuffle=False,
-            collate_fn=alignCollate(self.imgW, self.imgH)
+            shuffle=False
         )
 
         val_iter = iter(val_loader)
@@ -298,20 +316,24 @@ class Classifier_CRNN:
         # print('Speed:', num_files / processing_time, 'fps')
         return values
 
+
 def crop_from_img_rectangle(img, left, top, right, bottom):
-    extend_y = max(int((bottom - top) / 3), 4)
-    extend_x = int(extend_y / 2)
+    extend_y = 6
+    extend_x = 0
     top = max(0, top - extend_y)
     bottom = min(img.shape[0], bottom + extend_y)
     left = max(0, left - extend_x)
     right = min(img.shape[1], right + extend_x)
     if left >= right or top >= bottom or left < 0 or right < 0 or left >= img.shape[1] or right >= img.shape[1]:
         return True, None
-    return False, img[top:bottom, left:right]
+    return False, img[top:bottom, left:right], left, top, right, bottom
+
 
 def get_boxes_data(img, boxes):
     boxes_data = []
     boxes_info = []
+    max_wh_ratio = 1
+    total=0
     for box_loc in boxes:
         box_loc = np.array(box_loc).astype(np.int32).reshape(-1, 2)
         left = min(box_loc[0][0], box_loc[3][0])
@@ -320,13 +342,18 @@ def get_boxes_data(img, boxes):
         bottom = max(box_loc[2][1], box_loc[3][1])
         if (right - left) < 20 or (bottom - top) < 10:
             continue
-        NG, box_data = crop_from_img_rectangle(img, left, top, right, bottom)
+        NG, box_data, new_left, new_top, new_right, new_bottom = crop_from_img_rectangle(img, left, top, right, bottom)
         if NG:
             continue
-        box_info = bbox(left,top,right,bottom)
+        wh_ratio = (new_right - new_left) / (new_bottom - new_top)
+        total+=wh_ratio
+        if wh_ratio > max_wh_ratio:
+            max_wh_ratio = wh_ratio
+        box_info = bbox(new_left, new_top, new_right, new_bottom)
         boxes_info.append(box_info)
         boxes_data.append(box_data)
-    return boxes_data, boxes_info
+    print('Max wh ratio:', max_wh_ratio, 'total',total)
+    return boxes_data, boxes_info, max_wh_ratio
 
 
 if __name__ == '__main__':

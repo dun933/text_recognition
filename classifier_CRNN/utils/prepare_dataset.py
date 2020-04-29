@@ -284,11 +284,11 @@ def remove_unsuitable_samples(dir, alphabet_path='../data/char_238'):
 
 
 if __name__ == "__main__":
-    #remove_unsuitable_samples('/data/dataset/ocr_dataset/random')
+    remove_unsuitable_samples('/data/dataset/ocr_dataset/random')
     #prepare_train_from_icdar(icdar_dir, output_dir)
     #fix_unicode('/data/train_data_29k_29Feb_update30Mar/val_printed')
 
-    final_list_dir=['en_00','en_01','vi_00','vi_01','meta','random', 'InkData_line_processed']
+    final_list_dir=['random', 'InkData_line_processed']
     root_dir = '/data/dataset/ocr_dataset'
 
     # data_dir='cleaned_data_merge_fixed/train'
@@ -320,7 +320,7 @@ if __name__ == "__main__":
 
     #final_list_dir.append('printed_30Mar')
 
-    prepare_train_test_from_multiple_dir(root_dir, final_list_dir, percentage=1.0, train_ratio=0.8)
+    prepare_train_test_from_multiple_dir(root_dir, final_list_dir, percentage=1.0, train_ratio=0.9)
     # img_dir='/home/duycuong/PycharmProjects/dataset/ocr_dataset/meta'
     # crop_collected_data2(img_dir)
     # gen_blank_image('/home/duycuong/PycharmProjects/dataset/blank_images')

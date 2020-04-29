@@ -3,6 +3,7 @@ import cv2
 import os
 import  shutil
 import classifier_CRNN.pre_processing.table_border_extraction_fns as tblet
+import classifier_CRNN.pre_processing.augment_functions as augment
 
 def test_get_numb_line_img(path):
     list_file = ppf.list_files1(path, 'jpg')
@@ -65,10 +66,30 @@ def test_extract_table(path):
                 c+=1
         cv2.waitKey()
 
+def test_delete_red_sign(path):
+    list_file = ppf.list_files1(path, 'jpg')
+    list_file += ppf.list_files1(path, 'png')
+    for pimg in list_file:
+        # cv2.destroyAllWindows()
+        path_img = os.path.join(path, pimg)
+        img = cv2.imread(path_img)
+        ppf.delete_red_sign_in_text_black(img, True)
+
+def test_auto_rotate_image(path):
+    list_file = ppf.list_files1(path, 'jpg')
+    list_file += ppf.list_files1(path, 'png')
+    for pimg in list_file:
+        # cv2.destroyAllWindows()
+        path_img = os.path.join(path, pimg)
+        img = cv2.imread(path_img)
+        img_out = ppf.auto_rotation(img, debug= True)
+        cv2.imshow('img out ',img_out)
+        cv2.waitKey()
+
 if __name__ == "__main__":
-    path = 'C:/Users/chungnx/Desktop/box_text'
+    path = 'E:/data_image'
     # get_numb_line_img(cv2.imread(path))
-    test_erase_box_cell(path)
+    # test_erase_box_cell(path)
     # test_extract_table(path)
     # path = 'C:/Users/chungnx/Desktop/test_line_text'
-    # test_get_numb_line_img('C:/Users/chungnx/Desktop/test_line_text')
+    test_auto_rotate_image(path)

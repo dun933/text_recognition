@@ -191,11 +191,15 @@ def erase_img(img, temp , rect , pixel_cal=5, method=cv2.INPAINT_TELEA):
     return dst
 
 
-def auto_rotation(img, expand_angle=3, outputangle = False):
+def auto_rotation(img, expand_angle=3, outputangle = False,debug = False):
     gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    h, w = gray_img.shape
-    edges = cv2.Canny(gray_img, 50, 150, apertureSize=3)
-    blank_image = np.zeros(shape=[h, w, 1], dtype=np.uint8)
+    gray_img = cv2.medianBlur(gray_img,3)
+    h_img, w_img = gray_img.shape
+    scale = 1500./min(h_img,w_img)
+    gray_img = cv2.resize(gray_img,None,fx= scale , fy= scale)
+    h_img, w_img = gray_img.shape
+    edges = cv2.Canny(gray_img, 60, 150, apertureSize=3)
+    blank_image = np.zeros(shape=[h_img, w_img, 1], dtype=np.uint8)
     major = cv2.__version__.split('.')[0]
     if major == '3':
         _, contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -204,18 +208,26 @@ def auto_rotation(img, expand_angle=3, outputangle = False):
     list_bb = []
     for c in contours:
         x, y, w, h = cv2.boundingRect(c)
+        # if w > 5 and h >5:
         list_bb.append([x, y, x + w, y + h])
     img_cp = img.copy()
     for b in list_bb:
         centerx = int((b[2] - b[0]) / 2 + b[0])
         centery = int((b[3] - b[1]) / 2 + b[1])
-        cv2.circle(blank_image, (centerx, centery), 2, (255, 255, 0), -1)
-    lines = cv2.HoughLinesP(blank_image, 3, np.pi / 180, threshold=100, minLineLength=200, maxLineGap=35)
+        cv2.circle(blank_image, (centerx, centery), 1, (255, 255, 255), -1)
+    minLineLen = min(h_img,w_img)/8
+    if debug == True:
+        print(min(h_img,w_img))
+        img_cp2 = gray_img.copy()
+        print('min ', minLineLen)
+    lines = cv2.HoughLinesP(blank_image, 3, np.pi / 180, threshold=90, minLineLength=minLineLen, maxLineGap=35)
     list_angle = []
     for ln in lines:
         x1, y1, x2, y2 = ln[0]
         angle = (math.atan2((y1 - y2), (x1 - x2)) * 180) / math.pi
         list_angle.append(angle)
+        if debug == True:
+            cv2.line(img_cp2,(x1, y1),(x2, y2),(255,0,0), 1)
     list_cluster_angle = []
     max_candidate = 0
     angle_rotate = 0
@@ -234,6 +246,11 @@ def auto_rotation(img, expand_angle=3, outputangle = False):
             new_cluster = [ag, 1]
             list_cluster_angle.append(new_cluster)
     convert_angle_opencv = 180 - angle_rotate
+    if debug == True:
+        cv2.imshow('blank img', blank_image)
+        cv2.imshow('img_cp', img_cp2)
+        cv2.imshow('img ed',edges)
+        print('angle ',convert_angle_opencv)
     if outputangle == True:
         return  convert_angle_opencv
     img_cp = rotate_image_angle(img_cp, convert_angle_opencv)
@@ -435,6 +452,40 @@ def background_subtract(image, bgr_path=''):
     except:
         return image
 
+
+lower_red1 = np.array([0, 50, 50])
+upper_red1 = np.array([30, 255, 255])
+
+# upper red
+lower_red2 = np.array([165, 50, 50])
+upper_red2 = np.array([180, 255, 255])
+
+lower_black = np.array([
+    0, 0, 0])
+upper_black = np.array([180, 255, 180])
+
+def filter_color_image(img, lower_hsv, uper_hsv, binaryimage=True):
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(img_hsv, lower_hsv, uper_hsv)
+    if binaryimage == True:
+        return mask
+    else:
+        res = cv2.bitwise_and(img, img, mask=mask)
+        return res
+
+def delete_red_sign_in_text_black(img, debug = False):
+    img1 = filter_color_image(img, lower_red1, upper_red1)
+    img2 = filter_color_image(img, lower_red2, upper_red2)
+    img3 = filter_color_image(img, lower_black, upper_black)
+    img1 += img2
+    imgrs = cv2.bitwise_not(img1, mask=img3)
+    if debug == True:
+        cv2.imshow('mask red',img1)
+        cv2.imshow('mask black',img3)
+        cv2.imshow('result',(255 - imgrs))
+        cv2.waitKey()
+    return 255 - imgrs
+
 def extract_for_demo_json(img, temp_json, image_directory = None, eraseline = False, subtract_bgr = False,
                           gen_bgr=False, show_text = False, erasecell = True, splitline = True):
     img_save_bl = img.copy()
@@ -507,7 +558,6 @@ def extract_for_demo_json(img, temp_json, image_directory = None, eraseline = Fa
             else:
                 classimginf.data.append(info_img)
 
-            dict_class_img_info[classimginf.name] = classimginf
             print('---------------{0}'.format(classimginf.data_type))
             if image_directory is not None and classimginf.data_type == 'image':
                 imgcrp = crop_image(img,bx,by,ex,ey)
@@ -520,8 +570,8 @@ def extract_for_demo_json(img, temp_json, image_directory = None, eraseline = Fa
 
                 cv2.imwrite(path_save_crop_file, imgcrp)
                 classimginf.value = path_save_crop_file
-                classimginf.value_nlp = path_save_crop_file
 
+            dict_class_img_info[classimginf.name] = classimginf
             cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
             if show_text:
                 cv2.putText(img_save_bl, classimginf.name, (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
@@ -565,87 +615,7 @@ def extract_for_demo_json(img, temp_json, image_directory = None, eraseline = Fa
 
     return dict_class_img_info, max_wh_ratio , list_group_mark
 
-def gen_image_for_demo(path_image,
-                       temp_json,
-                       save_path='/data/data_imageVIB/1/',
-                       save_filename='result.jpg',
-                       show_text=False):
-    if save_path is not None:
-        if not os.path.isdir(save_path):
-            os.mkdir(save_path)
-    data_dict = temp_json
-    template = clTemplate_demo()
-    template.height = data_dict['image_size']['height']
-    template.width = data_dict['image_size']['width']
-    template.name_template = data_dict['name']
-    template.type = data_dict['type']
-    template.category = data_dict['category']
-    template.imageSource = data_dict['image_source']
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    img_bl = cv2.imread(path_image)
-    img_bl = cv2.resize(img_bl, (template.width, template.height))
-    #img_bl = calib_image(img_bl)
-    dict_fields = data_dict['fields']
-    h_n = img_bl.shape[0]
-    w_n = img_bl.shape[1]
-    ratioy = h_n / template.height
-    ratiox = w_n / template.width
-    img_save_bl = img_bl.copy()
-    max_wh_ratio = 1
-    for df in dict_fields:
-        if df['type'] != 'mark':
-            classimginf = clImageInfor_demo()
-            classimginf.id = df['id']
-            classimginf.name = df['name']
-            classimginf.label = df['label']
-            classimginf.type = df['type']
-            classimginf.data_type = df['data_type'] if 'data_type' in df else 'text'
-            by = int(df['position']['top'])
-            bx = int(df['position']['left'])
-            ex = bx + int(df['size']['width'])
-            ey = by + int(df['size']['height'])
-            wh_ratio = float(ex - bx) / float(ey - by)
-            # print('wh_ratio',wh_ratio)
-            if wh_ratio > max_wh_ratio:
-                max_wh_ratio = wh_ratio
-            bx = int(bx * ratiox)
-            ex = int(ex * ratiox)
-            by = int(by * ratioy)
-            ey = int(ey * ratioy)
-            classimginf.location = [bx, by, ex, ey]
-            offsetx, offsety = 1, 1
-            cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
-            if show_text:
-                cv2.putText(img_save_bl, classimginf.name, (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            classimginf.location = [bx, by, ex, ey]
-            # print(classimginf.prefix)
-        else:
-            group_mark = clGroupMark_demo()
-            group_mark.type = df['type']
-            group_mark.name = df['name']
-            group_mark.label = df['label']
-            group_mark.id = df['id']
-            group_mark.data_type = df['data_type']
-            dict_option = df['options']
-            for dopt in dict_option:
-                clmark = clMark_demo()
-                clmark.name = dopt['name']
-                clmark.label = dopt['label']
-                clmark.type = dopt['type']
-                clmark.id = dopt['id']
-                by = int(dopt['position']['top'])
-                bx = int(dopt['position']['left'])
-                ex = bx + int(dopt['size']['width'])
-                ey = by + int(dopt['size']['height'])
-                bx = int(bx * ratiox)
-                ex = int(ex * ratiox)
-                by = int(by * ratioy)
-                ey = int(ey * ratioy)
-                cv2.rectangle(img_save_bl, (bx, by), (ex, ey), (0, 0, 255), 4)
-                if show_text:
-                    cv2.putText(img_save_bl, clmark.name, (bx - 100, by + 50), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        save_path_rs = os.path.join(save_path, save_filename)
-        cv2.imwrite(save_path_rs, img_save_bl)
+
 
 def extract_for_demo(listimg, path_config_file, save_to_database=False, eraseline=False, subtract_bgr=True, gen_bgr=False):
     if len(listimg) == 0:
@@ -1140,138 +1110,10 @@ def list_files1(directory, extension):
     return list_file
 
 
-def store_data_handwriting_template(path, path_config_file, save_path, expand_y=0):
-    list_img = list_files1(path, "jpg")
-    list_img += list_files1(path, "png")
-    dir_name = os.path.dirname(path)
-
-    pred_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
-    if save_path is not None:
-        result_save_dir = os.path.join(save_path, "aicrhw_" + pred_time)
-        if not os.path.isdir(result_save_dir):
-            os.mkdir(result_save_dir)
-    if len(list_img) == 0:
-        print("input image empty")
-        return
-    template = clTemplate_demo()
-    with open(path_config_file, 'r+') as readf:
-        count = 0
-        for line in readf:
-            count += 1
-            if count == 1:
-                template.name_template = line
-            else:
-                list_inf = line.split()
-                if len(list_inf) == 5:
-                    bb_i = [list_inf[0], int(list_inf[1]), int(list_inf[2]), int(list_inf[1]) + int(list_inf[3]),
-                            int(list_inf[2]) + int(list_inf[4])]
-                    template.listBoxinfor.append(bb_i)
-                elif len(list_inf) == 2:
-                    template.height = int(list_inf[0])
-                    template.width = int(list_inf[1])
-    count_img = 0
-    list_class_img_info = []
-    count = 0
-    for path_img in list_img:
-        path_img = os.path.join(path, path_img)
-        img = cv2.imread(path_img)
-        count += 1
-        path_save_image = os.path.join(result_save_dir, "AICR_P" + str(count).zfill(7))
-        if not os.path.isdir(path_save_image):
-            os.mkdir(path_save_image)
-        path_org_img = os.path.join(path_save_image, "origine.jpg")
-        cv2.imwrite(path_org_img, img)
-        img_bl = auto_rotation(img)
-        h_n = img_bl.shape[0]
-        w_n = img_bl.shape[1]
-        ratioy = h_n / template.height
-        ratiox = w_n / template.width
-        for if_box in template.listBoxinfor:
-            prefix = if_box[0]
-            count_img += 1
-            bx = int(if_box[1] * ratiox)
-            by = int((if_box[2] - expand_y) * ratioy)
-            ex = int(if_box[3] * ratiox)
-            ey = int((if_box[4] + expand_y) * ratioy)
-            info_img = crop_image(img_bl, bx, by, ex, ey)
-            save_path_img = os.path.join(path_save_image, prefix + ".jpg")
-            cv2.imwrite(save_path_img, info_img)
-    print("finished !!")
-
-
-def store_data_handwriting_table(path, save_path, expand_y=0):
-    list_img = list_files1(path, "jpg")
-    list_img += list_files1(path, "png")
-    dir_name = os.path.dirname(path)
-
-    pred_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
-    if save_path is not None:
-        result_save_dir = os.path.join(save_path, "aicrhw_" + pred_time)
-        if not os.path.isdir(result_save_dir):
-            os.mkdir(result_save_dir)
-    if len(list_img) == 0:
-        print("input image empty")
-        return
-    list_class_img_info = []
-    count = 0
-    for path_img in list_img:
-        path_img = os.path.join(path, path_img)
-        img = cv2.imread(path_img)
-        count += 1
-        path_save_image = os.path.join(result_save_dir, "AICR_P" + str(count).zfill(7))
-        if not os.path.isdir(path_save_image):
-            os.mkdir(path_save_image)
-        path_org_img = os.path.join(path_save_image, "origine.jpg")
-        cv2.imwrite(path_org_img, img)
-        img_bl = img.copy()
-        h_n = img_bl.shape[0]
-        w_n = img_bl.shape[1]
-        hline_list, vline_list = get_h_and_v_line_bbox_CNX(img_bl)
-        list_p_table, hline_list, vline_list = detect_table(hline_list, vline_list)
-        count_img = 0
-        for table in list_p_table:
-            table.detect_cells()
-            len_cells = len(table.listCells)
-            if len_cells != 12:
-                print("error ", path_save_image)
-            for id_box in range(len_cells):
-                if id_box % 2 != 0:
-                    count_img += 1
-                    bx, by, ex, ey = table.listCells[id_box]
-                    info_img = crop_image(img_bl, bx, by, ex, ey)
-                    save_path_img = os.path.join(path_save_image, str(count_img) + ".jpg")
-                    cv2.imwrite(save_path_img, info_img)
-    print("finished !!")
 
 def test_jpg():
     img_raw=cv2.imread('/home/aicr/cuongnd/aicr.core/test/template_4.png')
     cv2.imwrite('/home/aicr/cuongnd/aicr.core/test/template_4.jpg',img_raw)
-
-def convertTXT2JSON(path_txt, path_json):
-    list_dict_json = []
-    id = 1
-    with open(path_txt,mode = 'r+',encoding='utf-8') as readf:
-        for line in readf:
-            dict_feilds = {}
-            dict_pos = {}
-            dict_size = {}
-            line_str = line.split()
-            dict_feilds['id'] = id
-            namef, typef, labelf = line_str[0].split('/')
-            dict_feilds['name'] = namef
-            dict_feilds['type'] = typef
-            labelf = labelf.replace('.',' ')
-            dict_feilds['label'] = labelf
-            dict_pos['left'] = int(line_str[1])
-            dict_pos['top'] = int(line_str[2])
-            dict_feilds['position'] = dict_pos
-            dict_size['width'] = int(line_str[3])
-            dict_size['height'] = int(line_str[4])
-            dict_feilds['size'] = dict_size
-            list_dict_json.append(dict_feilds)
-            id += 1
-    with open(path_json,mode = 'w',encoding='utf-8') as fout:
-        json.dump(list_dict_json, fout,ensure_ascii= False,  indent=2, separators=(',', ': '))
 
 def gen_mask_img(path):
     training_time = datetime.today().strftime('%Y-%m-%d_%H-%M')
@@ -1316,8 +1158,33 @@ def gen_mask_img(path):
         cv2.imwrite(path_img_s_new, blank_image)
         os.rename(path_img, path_img_new)
 
+def resize_padding(img,size):
+    h = img.shape[0]
+    w = img.shape[1]
+    scale = size/w
+    blank_image = np.zeros(shape=[size, size, 1], dtype=np.uint8)
+    blank_image = 255 - blank_image
+    blank_image = cv2.cvtColor(blank_image,cv2.COLOR_GRAY2BGR)
+    if h > w:
+        scale = size/h
+    print(blank_image.shape)
+    imgrs = cv2.resize(img,None,fx = scale, fy = scale,interpolation=cv2.INTER_CUBIC)
+    offsetx = int(( size - imgrs.shape[1])/2.)
+    offsety = int(( size - imgrs.shape[0])/2.)
+    print(offsetx,offsety)
+    print(imgrs.shape)
+    blank_image[ offsety : offsety + imgrs.shape[0] , offsetx : offsetx + imgrs.shape[1] ] = imgrs
+    return blank_image
+
+
 if __name__ == "__main__":
-    convertTXT2JSON('C:/Users/chungnx/Desktop/relable/002_template.txt','C:/Users/chungnx/Desktop/relable/002_template.json')
+    import glob
+    files = [f for f in glob.glob('C:/Users/chungnx/Desktop/test_face/*.jpg', recursive=True)]
+    for l in files:
+        img = cv2.imread(l)
+        img = resize_padding(img,224)
+        cv2.imwrite(l,img)
+    # convertTXT2JSON('C:/Users/chungnx/Desktop/relable/002_template.txt','C:/Users/chungnx/Desktop/relable/002_template.json')
     # path = 'C:/Users/chungnx/Desktop/test'
     # list_file = list_files1(path,'jpg')
     # list_file += list_files1(path,'png')

@@ -9,11 +9,15 @@ import decoders
 
 
 class BasicModel(nn.Module):
-    def __init__(self, args):
+    def __init__(self):
         nn.Module.__init__(self)
 
-        self.backbone = getattr(backbones, args['backbone'])(**args.get('backbone_args', {}))
-        self.decoder = getattr(decoders, args['decoder'])(**args.get('decoder_args', {}))
+        from backbones.resnet import resnet18, deformable_resnet18
+        #self.backbone = getattr(backbones, args['backbone'])(**args.get('backbone_args', {}))
+        self.backbone = resnet18()
+        from decoders.seg_detector import SegDetector
+        self.decoder = SegDetector(adaptive=True, k =50, in_channels = [64,128,256,512])
+        #self.decoder = getattr(decoders, args['decoder'])(**args.get('decoder_args', {}))
 
     def forward(self, data, *args, **kwargs):
         return self.decoder(self.backbone(data), *args, **kwargs)
@@ -30,17 +34,16 @@ def parallelize(model, distributed, local_rank):
         return nn.DataParallel(model)
 
 class SegDetectorModel(nn.Module):
-    def __init__(self, args, device, distributed: bool = False, local_rank: int = 0):
+    def __init__(self, device, distributed: bool = False, local_rank: int = 0):
         super(SegDetectorModel, self).__init__()
         from decoders.seg_detector_loss import SegDetectorLossBuilder
 
-        self.model = BasicModel(args)
-        self.criterion = SegDetectorLossBuilder(
-            args['loss_class'], *args.get('loss_args', []), **args.get('loss_kwargs', {})).build()
+        self.model = BasicModel()
+        self.criterion = SegDetectorLossBuilder('L1BalanceCELoss').build()
         # for loading models
-        # if device.type !='cpu':
-        #     self.model = parallelize(self.model, distributed, local_rank)
-        #     self.criterion = parallelize(self.criterion, distributed, local_rank)
+        if device.type !='cpu':
+            self.model = parallelize(self.model, distributed, local_rank)
+            self.criterion = parallelize(self.criterion, distributed, local_rank)
         print('No paralell!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         self.device = device
         self.to(self.device)

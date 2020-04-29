@@ -11,10 +11,12 @@ class SegDetectorVisualizer(Configurable):
     vis_num = State(default=4)
     eager_show = State(default=False)
 
-    def __init__(self, **kwargs):
-        cmd = kwargs['cmd']
+    def __init__(self, cmd={}, **kwargs):
         if 'eager_show' in cmd:
             self.eager_show = cmd['eager_show']
+
+    # def __init__(self):
+    #     self.eager_show = True
 
     def visualize(self, batch, output_pair, pred):
         boxes, _ = output_pair

@@ -4,26 +4,27 @@ import os
 import torch
 import cv2
 import numpy as np
-from concern.config import Configurable, Config
 import math, time
+from structure.model import SegDetectorModel
+from structure.representers.seg_detector_representer import SegDetectorRepresenter
+from structure.visualizers.seg_detector_visualizer import SegDetectorVisualizer
 
-exp = '../config/aicr_ic15_resnet18.yaml'
-img_path = '../data/invoices_collected/21.jpg'
-# img_path= '../data/Eval/imgs/SCAN_20191128_145142994_003.jpg'
-# img_path= '/home/aicr/cuongnd/text_recognition/data/Cello/imgs/190715070245517_8478000669_pod.png'
-# img_path='/home/aicr/cuongnd/text_recognition/data/CMND/5.jpg'
-detector_model = 'model_epoch_200_minibatch_297000_8Mar'
-ckpt_path = 'outputs/' + detector_model
-polygon = True
+img_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/datasets/invoices_28April/test_images/147_1.jpg'
+detector_model = 'model_epoch_714_minibatch_15000'
+ckpt_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/workspace/outputs/train_2020-04-28_22-59/model/' + detector_model
+# detector_model = 'pre-trained-model-synthtext-resnet18'
+# ckpt_path = '/home/aicr/cuongnd/aicr.core/detector_DB_train/pretrained/' + detector_model
+
+polygon = False
 visualize = True
-img_short_side = 736  # 736 1200
-detector_box_thres = 0.5
-gpu_test=None
+img_short_side = 800  # 736 960
+detector_box_thres = 0.01
+gpu_test = 1
+os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_test)
 
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
-    parser.add_argument('--exp', type=str, default=exp)
     parser.add_argument('--resume', type=str, help='Resume from checkpoint', default=ckpt_path)
     parser.add_argument('--result_dir', type=str, default='./demo_results/', help='path to save results')
     parser.add_argument('--data', type=str,
@@ -44,25 +45,24 @@ def main():
     args = vars(args)
     args = {k: v for k, v in args.items() if v is not None}
 
-    conf = Config()
-    experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
-    experiment_args.update(cmd=args)
-    experiment = Configurable.construct_class_from_config(experiment_args)
-
-    Demo(experiment, experiment_args, gpu=gpu_test, cmd=args).inference(img_path, args['visualize'])
+    detector = Demo(gpu=gpu_test, cmd=args)
+    begin = time.time()
+    detector.inference(img_path, args['visualize'])
+    end = time.time()
+    print('Inference time:', end - begin, 'seconds')
 
 
 class Demo:
-    def __init__(self, experiment, args, gpu='0', cmd=dict()):
+    def __init__(self, gpu='0', cmd=dict()):
         self.RGB_MEAN = np.array([122.67891434, 116.66876762, 104.00698793])
-        self.experiment = experiment
         self.gpu = gpu
-        experiment.load('evaluation', **args)
         self.args = cmd
-        self.structure = experiment.structure
         self.init_torch_tensor()
         self.init_model(self.args['resume'])
         self.model.eval()
+
+        self.segRepresent = SegDetectorRepresenter()
+        self.segVisualizer = SegDetectorVisualizer()
 
     def init_torch_tensor(self):
         if torch.cuda.is_available() and self.gpu != None:
@@ -73,7 +73,7 @@ class Demo:
             torch.set_default_tensor_type('torch.FloatTensor')
 
     def init_model(self, path):
-        self.model = self.structure.builder.build(self.device)
+        self.model = SegDetectorModel(self.device, distributed=False, local_rank=0)
         if not os.path.exists(path):
             print("Checkpoint not found: " + path)
             return
@@ -136,14 +136,15 @@ class Demo:
         with torch.no_grad():
             batch['image'] = img
             pred = self.model.forward(batch, training=False)
-            output = self.structure.representer.represent(batch, pred, is_output_polygon=self.args['polygon'])
+            output = self.segRepresent.represent(batch, _pred=pred, is_output_polygon=self.args['polygon'])
             if not os.path.isdir(self.args['result_dir']):
                 os.mkdir(self.args['result_dir'])
             self.format_output(batch, output)
             boxes, _ = output
             boxes = boxes[0]
-            if visualize and self.structure.visualizer:
-                vis_image = self.structure.visualizer.demo_visualize(image_path, output)
+
+            if visualize:
+                vis_image = self.segVisualizer.demo_visualize(image_path, output)
                 cv2.imwrite(os.path.join(self.args['result_dir'],
                                          image_path.split('/')[-1].split('.')[0] + '_ ' + detector_model + '_ ' + str
                                          (detector_box_thres) + '.jpg'), vis_image)
